@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { IpadPackage, IpadSoftware } from "@/bridge.ts";
 import { runEach } from "@/main/ssh.ts";
+import { readDeveloperSetup } from "@/main/system/developerSetup.ts";
 
 const packageFields = [
   "Package",
@@ -87,6 +88,7 @@ export async function readSoftware(client: Client): Promise<IpadSoftware> {
     .map(({ listing }) => listing);
   const versions = new Map(packages.map(({ id, version }) => [id, version]));
   const webkit = readBundle(outputs.webkit);
+  const developerSetup = await readDeveloperSetup(client);
   return {
     carbon: outputs.carbon.trim() || null,
     iocaste: outputs.iocaste.trim() !== "",
@@ -97,5 +99,6 @@ export async function readSoftware(client: Client): Promise<IpadSoftware> {
     webkit: webkit && withoutSystemPrefix(webkit.CFBundleVersion),
     packages,
     generatedPackages: entries.length - packages.length,
+    developerSetup,
   };
 }

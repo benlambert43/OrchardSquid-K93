@@ -84,6 +84,21 @@ export interface IpadPackage {
   installedBytes: number | null;
 }
 
+export interface IpadOffer {
+  source: string;
+  version: string;
+  url: string | null;
+  md5: string | null;
+}
+
+export interface IpadDeveloperSetup {
+  sources: string[];
+  defaultPasswordAccounts: string[];
+  aptGet: boolean;
+  rootCertificates: boolean;
+  offers: Partial<Record<string, IpadOffer[]>>;
+}
+
 export interface IpadSoftware {
   carbon: string | null;
   iocaste: boolean;
@@ -94,6 +109,7 @@ export interface IpadSoftware {
   webkit: string | null;
   packages: IpadPackage[];
   generatedPackages: number;
+  developerSetup: IpadDeveloperSetup;
 }
 
 export interface IpadCrashReports {
