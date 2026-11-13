@@ -1,13 +1,43 @@
 import { app } from "electron";
+import { z } from "zod";
 
-import type { Bridge } from "@/bridge.ts";
+import type { Requests } from "@/bridge.ts";
 import { findIpad } from "@/main/ipad.ts";
+import {
+  openShell,
+  resizeShell,
+  submitShellPassword,
+  writeShell,
+} from "@/main/shell.ts";
+import { readIpadSystem } from "@/main/system.ts";
 
 type Handlers = {
-  [Method in keyof Bridge]: (...args: unknown[]) => ReturnType<Bridge[Method]>;
+  [Method in keyof Requests]: (
+    ...args: unknown[]
+  ) => ReturnType<Requests[Method]> | Awaited<ReturnType<Requests[Method]>>;
 };
 
+const terminalSizeSchema = z.object({
+  cols: z.int().min(1).max(1000),
+  rows: z.int().min(1).max(1000),
+});
+
+const textSchema = z.string();
+
 export const handlers: Handlers = {
-  getAppVersion: () => Promise.resolve(app.getVersion()),
+  getAppVersion: () => app.getVersion(),
   findIpad,
+  readIpadSystem,
+  openShell: (size) => {
+    openShell(terminalSizeSchema.parse(size));
+  },
+  writeShell: (input) => {
+    writeShell(textSchema.parse(input));
+  },
+  resizeShell: (size) => {
+    resizeShell(terminalSizeSchema.parse(size));
+  },
+  submitShellPassword: (password) => {
+    submitShellPassword(textSchema.parse(password));
+  },
 };

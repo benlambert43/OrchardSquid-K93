@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-    resolve: { tsconfigPaths: true },
+    resolve: { tsconfigPaths: true, preserveSymlinks: false },
     plugins: [
       react(),
       babel({ presets: [reactCompilerPreset()] }),
