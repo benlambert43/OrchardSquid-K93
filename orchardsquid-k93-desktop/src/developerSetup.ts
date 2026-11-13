@@ -3,6 +3,14 @@ export const developerPackages = {
   aptGet: "apt7",
   aptGetBootstrap: ["apt7-key", "berkeleydb", "apt7"],
   tools: ["git", "curl", "vim", "rsync", "make"],
+  compiler: "org.coolstar.llvm-clang32",
+  linker: "org.coolstar.cctools",
+  compilerParts: [
+    "org.coolstar.llvm-clang32",
+    "org.coolstar.cctools",
+    "org.coolstar.ld64",
+    "uuid",
+  ],
 } as const;
 
 export const developerPackageIds: string[] = [
@@ -10,8 +18,14 @@ export const developerPackageIds: string[] = [
     developerPackages.zebra,
     ...developerPackages.aptGetBootstrap,
     ...developerPackages.tools,
+    ...developerPackages.compilerParts,
   ]),
 ];
+
+export const compilerFolder = {
+  path: "/usr/share/llvm",
+  dataPath: "/private/var/llvm",
+} as const;
 
 export const developerSources = {
   zebra: {

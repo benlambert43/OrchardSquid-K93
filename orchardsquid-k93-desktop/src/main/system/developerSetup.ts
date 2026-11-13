@@ -1,7 +1,7 @@
 import type { Client } from "ssh2";
 
 import type { IpadDeveloperSetup, IpadOffer } from "@/bridge.ts";
-import { developerPackageIds } from "@/developerSetup.ts";
+import { compilerFolder, developerPackageIds } from "@/developerSetup.ts";
 import { runEach } from "@/main/ssh.ts";
 
 const factoryPasswordHash = "/smx7MYTQIi2M";
@@ -10,6 +10,7 @@ const profileManifest =
   "/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PayloadManifest.plist";
 const rootCertificateProfile = "ca.litten.rootca";
 const contextLines = 25;
+const kilobyte = 1024;
 
 const packagePattern = developerPackageIds
   .map((id) => id.replaceAll(".", String.raw`\.`))
@@ -19,6 +20,8 @@ const commands = {
   sources: "cat /etc/apt/sources.list.d/*.list",
   defaultPasswordAccounts: `grep -E '^(root|mobile):${factoryPasswordHash}:' /etc/master.passwd | sed 's/:.*//'`,
   aptGet: "ls /usr/bin/apt-get",
+  systemFree: "df -k /",
+  compilerFolderLink: `find ${compilerFolder.path} -maxdepth 0 -printf '%l'`,
   rootCertificates: `grep -l ${rootCertificateProfile} ${profileManifest}`,
   offers: `(cd ${catalogueFolder} && grep -A ${String(contextLines)} -x -E 'Package: (${packagePattern})' *_Packages)`,
 };
@@ -73,7 +76,18 @@ function toOffer(
     version,
     url: base && filename ? `${base}${filename.replace(/^\.\//, "")}` : null,
     md5: fields.get("MD5sum") ?? null,
+    installedBytes: kilobytes(fields.get("Installed-Size")),
   };
+}
+
+function kilobytes(value: string | undefined): number | null {
+  const count = Number(value);
+  return value && Number.isFinite(count) ? count * kilobyte : null;
+}
+
+function parseSystemFree(output: string): number | null {
+  const available = /^\S+\s+\d+\s+\d+\s+(\d+)\s+\d+%\s+\/$/m.exec(output)?.[1];
+  return kilobytes(available);
 }
 
 function parseListings(output: string): Listing[] {
@@ -128,6 +142,8 @@ export async function readDeveloperSetup(
     defaultPasswordAccounts: lines(outputs.defaultPasswordAccounts),
     aptGet: outputs.aptGet.trim() !== "",
     rootCertificates: outputs.rootCertificates.trim() !== "",
+    systemFreeBytes: parseSystemFree(outputs.systemFree),
+    compilerFolderLink: outputs.compilerFolderLink.trim() || null,
     offers: parseOffers(outputs.offers, sourceUrls),
   };
 }

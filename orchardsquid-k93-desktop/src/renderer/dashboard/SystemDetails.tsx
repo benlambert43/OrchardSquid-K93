@@ -1,6 +1,8 @@
 import { Detail, DetailList } from "@orchardsquid-k93/ui";
+import { Fragment } from "react";
 
 import type { IpadSystem, Usage } from "@/bridge.ts";
+import { CleanUp } from "@/renderer/dashboard/CleanUp.tsx";
 import {
   formatBytes,
   formatDuration,
@@ -11,7 +13,13 @@ function usage({ usedBytes, totalBytes }: Usage): string {
   return `${formatBytes(usedBytes)} of ${formatBytes(totalBytes)}`;
 }
 
-export function SystemDetails({ system }: { system: IpadSystem }) {
+export function SystemDetails({
+  system,
+  onCleanedUp,
+}: {
+  system: IpadSystem;
+  onCleanedUp: () => void;
+}) {
   const { cpu, memory } = system;
   return (
     <DetailList>
@@ -27,13 +35,15 @@ export function SystemDetails({ system }: { system: IpadSystem }) {
         {usage(memory)}
       </Detail>
       {system.volumes.map((volume) => (
-        <Detail
-          key={volume.name}
-          label={`${volume.name} volume`}
-          meter={volume.usedBytes / volume.totalBytes}
-        >
-          {usage(volume)}
-        </Detail>
+        <Fragment key={volume.name}>
+          <Detail
+            label={`${volume.name} volume`}
+            meter={volume.usedBytes / volume.totalBytes}
+          >
+            {usage(volume)}
+          </Detail>
+          {volume.name === "System" && <CleanUp onCleanedUp={onCleanedUp} />}
+        </Fragment>
       ))}
       <Detail label="Processes">{system.processes}</Detail>
       <Detail label="Kernel">{system.kernel}</Detail>

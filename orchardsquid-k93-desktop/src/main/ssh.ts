@@ -146,6 +146,36 @@ export function runForBytes(client: Client, command: string): Promise<Buffer> {
   });
 }
 
+export function runScript(
+  client: Client,
+  script: string,
+  timeoutMs: number,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      client.destroy();
+      reject(new Error("The script on the iPad took too long"));
+    }, timeoutMs);
+    client.exec("bash -s", (error, channel) => {
+      if (error) {
+        clearTimeout(timer);
+        reject(error);
+        return;
+      }
+      const output: Buffer[] = [];
+      channel.on("data", (chunk: Buffer) => {
+        output.push(chunk);
+      });
+      channel.stderr.resume();
+      channel.on("close", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(output).toString());
+      });
+      channel.end(script);
+    });
+  });
+}
+
 export async function run(client: Client, command: string): Promise<string> {
   return (await runForBytes(client, command)).toString();
 }

@@ -10,6 +10,7 @@ import {
   transportSchema,
   wifiAddressSchema,
 } from "@/main/connection.ts";
+import { readLaptopToolchain } from "@/main/development.ts";
 import {
   openShell,
   resizeShell,
@@ -18,6 +19,7 @@ import {
 } from "@/main/shell.ts";
 import {
   checkWifiAddress,
+  cleanUpIpad,
   findIpad,
   readIpadBatteryHealth,
   readIpadSoftware,
@@ -50,6 +52,8 @@ export const handlers: Handlers = {
   readIpadSystem,
   readIpadBatteryHealth,
   readIpadSoftware,
+  readLaptopToolchain,
+  cleanUpIpad,
   exportSshBackup,
   restoreSshBackup,
   openShell: (size) => {

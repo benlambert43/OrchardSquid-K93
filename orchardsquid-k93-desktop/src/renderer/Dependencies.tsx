@@ -12,7 +12,7 @@ import {
   TransportPicker,
 } from "@/renderer/TransportPicker.tsx";
 
-async function loadSoftware(): Promise<Check<IpadSoftware>> {
+export async function loadSoftware(): Promise<Check<IpadSoftware>> {
   try {
     const report = await window.bridge.readIpadSoftware();
     return report.state === "ok"

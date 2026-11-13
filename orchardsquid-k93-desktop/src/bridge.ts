@@ -89,6 +89,7 @@ export interface IpadOffer {
   version: string;
   url: string | null;
   md5: string | null;
+  installedBytes: number | null;
 }
 
 export interface IpadDeveloperSetup {
@@ -96,6 +97,8 @@ export interface IpadDeveloperSetup {
   defaultPasswordAccounts: string[];
   aptGet: boolean;
   rootCertificates: boolean;
+  systemFreeBytes: number | null;
+  compilerFolderLink: string | null;
   offers: Partial<Record<string, IpadOffer[]>>;
 }
 
@@ -134,6 +137,27 @@ export type IpadSoftwareReport =
   | { state: "signed-out" }
   | Unreachable;
 
+export interface LaptopToolchain {
+  xcode: { folder: string; version: string | null } | null;
+  armv7Linker: boolean;
+  homebrew: string | null;
+  ldid: string | null;
+  iproxy: string | null;
+  theos: { folder: string; installed: boolean };
+  sdk: boolean;
+}
+
+export interface IpadCleanUp {
+  moved: string[];
+  alreadyDone: number;
+  failed: string[];
+  freeBeforeBytes: number | null;
+  freeAfterBytes: number | null;
+}
+
+export type IpadCleanUpReport =
+  { state: "ok"; cleanUp: IpadCleanUp } | { state: "signed-out" } | Unreachable;
+
 export type SshBackupResult =
   | { state: "saved"; path: string; ipadIncluded: boolean }
   | { state: "cancelled" }
@@ -169,6 +193,8 @@ export interface Requests {
   readIpadSystem: () => Promise<IpadSystemReport>;
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;
+  readLaptopToolchain: () => Promise<LaptopToolchain>;
+  cleanUpIpad: () => Promise<IpadCleanUpReport>;
   exportSshBackup: () => Promise<SshBackupResult>;
   restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;

@@ -1,19 +1,13 @@
-import { DetailNote, Panel, PanelNote } from "@orchardsquid-k93/ui";
+import { Panel, PanelNote } from "@orchardsquid-k93/ui";
 import { use } from "react";
 
 import type { IpadOffer, IpadSoftware } from "@/bridge.ts";
 import { developerPackages } from "@/developerSetup.ts";
 import type { Check } from "@/renderer/ReportPanel.tsx";
-import { Command } from "@/renderer/dependencies/Command.tsx";
+import { type NumberedStep, NumberedSteps } from "@/renderer/NumberedSteps.tsx";
 
 const aptMethod = "/usr/lib/apt/methods/http";
 const downloadFolder = "/tmp";
-
-interface AptGetStep {
-  title: string;
-  command: string;
-  explanation: string;
-}
 
 interface Download {
   id: string;
@@ -36,7 +30,7 @@ function findDownloads(software: IpadSoftware): Download[] | null {
   return downloads.every((download) => download !== null) ? downloads : null;
 }
 
-function downloadStep({ id, file, offer }: Download): AptGetStep {
+function downloadStep({ id, file, offer }: Download): NumberedStep {
   return {
     title: `Download ${id} ${offer.version}`,
     command: String.raw`printf '600 URI Acquire\nURI: ${offer.url}\nFilename: ${file}\n\n' | ${aptMethod}`,
@@ -44,7 +38,7 @@ function downloadStep({ id, file, offer }: Download): AptGetStep {
   };
 }
 
-function checkStep({ id, file, offer }: Download): AptGetStep {
+function checkStep({ id, file, offer }: Download): NumberedStep {
   const name = `${id}.deb`;
   return {
     title: `Check ${name}`,
@@ -53,7 +47,7 @@ function checkStep({ id, file, offer }: Download): AptGetStep {
   };
 }
 
-function buildSteps(downloads: Download[]): AptGetStep[] {
+function buildSteps(downloads: Download[]): NumberedStep[] {
   const files = downloads.map(({ file }) => file).join(" ");
   return [
     ...downloads.flatMap((download) => [
@@ -100,25 +94,7 @@ export function AptGetSetup({
         and in order.
       </PanelNote>
       {downloads ? (
-        <ol className="divide-y divide-zinc-200 dark:divide-zinc-800">
-          {buildSteps(downloads).map(
-            ({ title, command, explanation }, index) => (
-              <li key={title} className="flex items-start gap-3 py-2.5">
-                <span
-                  aria-hidden
-                  className="w-5 shrink-0 text-right text-zinc-500 tabular-nums"
-                >
-                  {index + 1}.
-                </span>
-                <span className="min-w-0 font-medium wrap-anywhere">
-                  {title}
-                  <Command>{command}</Command>
-                  <DetailNote>{explanation}</DetailNote>
-                </span>
-              </li>
-            ),
-          )}
-        </ol>
+        <NumberedSteps steps={buildSteps(downloads)} />
       ) : (
         <PanelNote>
           Cydia&apos;s catalogue does not list a download for apt7 or one of the

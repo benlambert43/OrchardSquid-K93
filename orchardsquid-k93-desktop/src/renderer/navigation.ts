@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
 
-export type PageName = "dashboard" | "dependencies" | "shell" | "settings";
+export type PageName =
+  "dashboard" | "dependencies" | "development" | "shell" | "settings";
 
 export const pageLinks: Record<PageName, string> = {
   dashboard: "#/",
   dependencies: "#/dependencies",
+  development: "#/development",
   shell: "#/shell",
   settings: "#/settings",
 };
@@ -20,6 +22,8 @@ function currentPage(): PageName {
   switch (window.location.hash) {
     case pageLinks.dependencies:
       return "dependencies";
+    case pageLinks.development:
+      return "development";
     case pageLinks.shell:
       return "shell";
     case pageLinks.settings:

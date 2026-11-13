@@ -246,7 +246,14 @@ export function Dashboard() {
         </div>
         <div className="grid min-w-0 gap-6">
           <ReportPanel title="System" check={checks.system} explains>
-            {(system) => <SystemDetails system={system} />}
+            {(system) => (
+              <SystemDetails
+                system={system}
+                onCleanedUp={() => {
+                  refresh();
+                }}
+              />
+            )}
           </ReportPanel>
           <ReportPanel title="Top processes" check={checks.system}>
             {(system) => <ProcessDetails system={system} />}

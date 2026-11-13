@@ -3,12 +3,14 @@ import {
   CommandLineIcon,
   CubeIcon,
   Squares2X2Icon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { AppFrame } from "@orchardsquid-k93/ui";
 import type { JSX } from "react";
 
 import { Dashboard } from "@/renderer/Dashboard.tsx";
 import { Dependencies } from "@/renderer/Dependencies.tsx";
+import { Development } from "@/renderer/Development.tsx";
 import { type PageName, pageLinks, usePage } from "@/renderer/navigation.ts";
 import { Settings } from "@/renderer/Settings.tsx";
 import { Shell } from "@/renderer/Shell.tsx";
@@ -16,6 +18,7 @@ import { Shell } from "@/renderer/Shell.tsx";
 const pages: Record<PageName, () => JSX.Element> = {
   dashboard: Dashboard,
   dependencies: Dependencies,
+  development: Development,
   shell: Shell,
   settings: Settings,
 };
@@ -39,6 +42,12 @@ export function App() {
           label: "Dependencies",
           icon: <CubeIcon aria-hidden className="size-5" />,
           current: page === "dependencies",
+        },
+        {
+          href: pageLinks.development,
+          label: "Development",
+          icon: <WrenchScrewdriverIcon aria-hidden className="size-5" />,
+          current: page === "development",
         },
         {
           href: pageLinks.shell,

@@ -1,33 +1,13 @@
-import { DetailNote, PanelNote } from "@orchardsquid-k93/ui";
+import { PanelNote } from "@orchardsquid-k93/ui";
 
 import type { IpadDeveloperSetup, IpadSoftware } from "@/bridge.ts";
-import { developerPackages, developerSources } from "@/developerSetup.ts";
-import { formatNumber } from "@/renderer/format.ts";
-import { Command } from "@/renderer/dependencies/Command.tsx";
-
-type StepState = "done" | "todo";
-
-interface Step {
-  label: string;
-  state: StepState;
-  detail: string;
-  command?: string | undefined;
-}
-
-interface StepGroup {
-  title: string;
-  steps: Step[];
-}
-
-const stateLabels: Record<StepState, string> = {
-  done: "Done",
-  todo: "To do",
-};
-
-const indicatorClassNames: Record<StepState, string> = {
-  done: "bg-emerald-500",
-  todo: "bg-amber-500",
-};
+import {
+  compilerFolder,
+  developerPackages,
+  developerSources,
+} from "@/developerSetup.ts";
+import { formatBytes } from "@/renderer/format.ts";
+import { type Step, type StepGroup, StepList } from "@/renderer/StepList.tsx";
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction" });
 
@@ -94,6 +74,83 @@ function passwordStep(setup: IpadDeveloperSetup, account: string): Step {
     : { label, state: "done", detail: "Changed from the factory default." };
 }
 
+function isInstalled(software: IpadSoftware, id: string): boolean {
+  return software.packages.some((listing) => listing.id === id);
+}
+
+function compilerMoved(setup: IpadDeveloperSetup): boolean {
+  return setup.compilerFolderLink?.startsWith("/private/var/") ?? false;
+}
+
+function compilerFolderStep(software: IpadSoftware): Step {
+  const label = "Clang's folder on the data volume";
+  const setup = software.developerSetup;
+  if (compilerMoved(setup)) {
+    return {
+      label,
+      state: "done",
+      detail: `${compilerFolder.path} links to ${setup.compilerFolderLink ?? ""}.`,
+    };
+  }
+  if (isInstalled(software, developerPackages.compiler)) {
+    return {
+      label,
+      state: "done",
+      detail: `Clang is already installed in ${compilerFolder.path}.`,
+    };
+  }
+  return {
+    label,
+    state: "todo",
+    detail: `Clang puts all its files in ${compilerFolder.path}, about 270 MB, which does not fit on the system volume. This links that folder to the data volume first, and dpkg then installs through the link.`,
+    command: `mkdir -p ${compilerFolder.dataPath} && ln -s ${compilerFolder.dataPath} ${compilerFolder.path}`,
+  };
+}
+
+function compilerSpaceNeeded(software: IpadSoftware): number {
+  const moved = compilerMoved(software.developerSetup);
+  const sizes = developerPackages.compilerParts
+    .filter((id) => !isInstalled(software, id))
+    .filter((id) => !(moved && id === developerPackages.compiler))
+    .map((id) =>
+      Math.max(
+        0,
+        ...(software.developerSetup.offers[id] ?? []).map(
+          ({ installedBytes }) => installedBytes ?? 0,
+        ),
+      ),
+    );
+  return sizes.reduce((total, size) => total + size, 0);
+}
+
+function compilerSpaceStep(software: IpadSoftware): Step {
+  const label = "Room for the compiler";
+  const needed = compilerSpaceNeeded(software);
+  const free = software.developerSetup.systemFreeBytes;
+  if (needed === 0) {
+    return { label, state: "done", detail: "Nothing left to install." };
+  }
+  if (free === null) {
+    return {
+      label,
+      state: "todo",
+      detail: "The free space on the system volume could not be read.",
+    };
+  }
+  const sizes = `What is left to install needs about ${formatBytes(needed)} on the system volume, which has ${formatBytes(free)} free.`;
+  return free >= needed
+    ? {
+        label,
+        state: "done",
+        detail: `${sizes} That leaves about ${formatBytes(free - needed)}.`,
+      }
+    : {
+        label,
+        state: "todo",
+        detail: `${sizes} Installing it now would fail part way.`,
+      };
+}
+
 function buildGroups(software: IpadSoftware): StepGroup[] {
   const setup = software.developerSetup;
   return [
@@ -155,6 +212,15 @@ function buildGroups(software: IpadSoftware): StepGroup[] {
         sourceStep(setup, "LukeZGD's repository", developerSources.lukeZgd),
       ],
     },
+    {
+      title: "Compiler",
+      steps: [
+        compilerFolderStep(software),
+        compilerSpaceStep(software),
+        packageStep(software, "Clang (32-bit)", developerPackages.compiler),
+        packageStep(software, "ld64 and cctools", developerPackages.linker),
+      ],
+    },
   ];
 }
 
@@ -163,46 +229,9 @@ export function DeveloperDependencies({
 }: {
   software: IpadSoftware;
 }) {
-  const groups = buildGroups(software);
-  const steps = groups.flatMap((group) => group.steps);
-  const done = steps.filter(({ state }) => state === "done").length;
-
   return (
     <>
-      <PanelNote>
-        {formatNumber(done)} of {formatNumber(steps.length)} steps done.
-      </PanelNote>
-      {groups.map(({ title, steps: groupSteps }) => (
-        <section key={title}>
-          <h3
-            className="pt-4 pb-1.5 text-xs font-semibold tracking-wide
-              text-zinc-500 uppercase"
-          >
-            {title}
-          </h3>
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {groupSteps.map(({ label, state, detail, command }) => (
-              <li key={label} className="flex items-start gap-3 py-2.5">
-                <span
-                  aria-hidden
-                  className={`mt-1.5 size-2.5 shrink-0 rounded-full
-                  ${indicatorClassNames[state]}`}
-                />
-                <span className="min-w-0 font-medium wrap-anywhere">
-                  {label}
-                  {command && <Command>{command}</Command>}
-                  <DetailNote>{detail}</DetailNote>
-                </span>
-                <span
-                  className="ml-auto shrink-0 text-zinc-600 dark:text-zinc-400"
-                >
-                  {stateLabels[state]}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <StepList groups={buildGroups(software)} />
       <PanelNote>
         Run the commands in the Shell tab. Offered versions come from
         Cydia&apos;s catalogue, which is only as fresh as the last refresh in

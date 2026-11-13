@@ -3,6 +3,7 @@ import type { Client } from "ssh2";
 import type {
   Connection,
   IpadBatteryHealth,
+  IpadCleanUpReport,
   IpadReport,
   IpadSoftwareReport,
   IpadSystem,
@@ -19,6 +20,7 @@ import { findIpadOverUsb } from "@/main/ipad.ts";
 import { connectSsh, SignInRefusedError } from "@/main/ssh.ts";
 import { readBattery } from "@/main/system/battery.ts";
 import { readBatteryHealth } from "@/main/system/batteryHealth.ts";
+import { cleanUp } from "@/main/system/cleanUp.ts";
 import { readCpu } from "@/main/system/cpu.ts";
 import { readCrashReports } from "@/main/system/crashReports.ts";
 import { readIdentity } from "@/main/system/identity.ts";
@@ -101,6 +103,13 @@ export async function readIpadSoftware(): Promise<IpadSoftwareReport> {
   const reached = await inTurn(() => reach(readSoftware));
   return reached.state === "ok"
     ? { state: "ok", software: reached.reading }
+    : reached;
+}
+
+export async function cleanUpIpad(): Promise<IpadCleanUpReport> {
+  const reached = await inTurn(() => reach(cleanUp));
+  return reached.state === "ok"
+    ? { state: "ok", cleanUp: reached.reading }
     : reached;
 }
 
