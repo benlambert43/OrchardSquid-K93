@@ -252,7 +252,6 @@ const installers: Record<LaptopToolName, Installer> = {
   theos: installTheos,
   sdk: installSdk,
   ldid: installFormula("ldid"),
-  xz: installFormula("xz"),
 };
 
 async function findFirstStep(tool: LaptopToolName): Promise<DevelopmentStep> {

@@ -190,7 +190,6 @@ export interface LaptopToolchain {
   theos: TheosTool;
   sdk: SdkTool | null;
   ldid: LaptopTool | null;
-  xz: LaptopTool | null;
 }
 
 export type LaptopInstall =

@@ -145,13 +145,12 @@ async function readSdk(theos: string): Promise<SdkTool | null> {
 
 export async function readLaptopToolchain(): Promise<LaptopToolchain> {
   const folder = theosFolder();
-  const [xcode, homebrew, theos, sdk, ldid, xz] = await Promise.all([
+  const [xcode, homebrew, theos, sdk, ldid] = await Promise.all([
     readXcode(),
     readHomebrew(),
     readTheos(folder),
     readSdk(folder),
     readFormula("ldid"),
-    readFormula("xz"),
   ]);
-  return { xcode, homebrew, theos, sdk, ldid, xz };
+  return { xcode, homebrew, theos, sdk, ldid };
 }

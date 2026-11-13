@@ -25,7 +25,7 @@ import {
   withProgress,
 } from "@/main/development/progress.ts";
 import { exclusively } from "@/main/development/tasks.ts";
-import { theosFolder } from "@/main/development/tools.ts";
+import { moduleCacheFolder, theosFolder } from "@/main/development/tools.ts";
 import { readSetting, writeSetting } from "@/main/settings.ts";
 import { readText } from "@/main/sshFiles.ts";
 import { installPackageOnIpad } from "@/main/system.ts";
@@ -42,8 +42,13 @@ const createTimeoutMs = 60 * 1000;
 const buildTimeoutMs = 10 * 60 * 1000;
 const editorTimeoutMs = 30 * 1000;
 
-const { sdkVersion, minimumVersion, architecture, compilerFlags } =
-  developmentTarget;
+const {
+  sdkVersion,
+  minimumVersion,
+  architecture,
+  compilerFlags,
+  packageCompression,
+} = developmentTarget;
 const target = `iphone:clang:${sdkVersion}:${minimumVersion}`;
 
 const theosMakefile = /\$\(THEOS(?:_MAKE_PATH)?\)/;
@@ -226,7 +231,12 @@ export async function buildDevelopmentProject(
         ["package", `TARGET=${target}`, `ARCHS=${architecture}`],
         {
           cwd: folder,
-          env: { THEOS: theos, ADDITIONAL_CFLAGS: compilerFlags },
+          env: {
+            THEOS: theos,
+            ADDITIONAL_CFLAGS: compilerFlags,
+            THEOS_PLATFORM_DEB_COMPRESSION_TYPE: packageCompression,
+            CLANG_MODULE_CACHE_PATH: moduleCacheFolder(),
+          },
           quietTimeoutMs: buildTimeoutMs,
           onLine: (line) => {
             const stage = buildStage.exec(line)?.[1];

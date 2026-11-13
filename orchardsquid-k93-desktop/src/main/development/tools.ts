@@ -64,3 +64,7 @@ export function toolEnvironment(): NodeJS.ProcessEnv {
 export function theosFolder(): string {
   return path.join(os.homedir(), appFolder, "theos");
 }
+
+export function moduleCacheFolder(): string {
+  return path.join(os.homedir(), appFolder, "cache", "clang-modules");
+}

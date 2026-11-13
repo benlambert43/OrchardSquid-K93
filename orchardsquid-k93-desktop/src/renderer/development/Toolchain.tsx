@@ -5,7 +5,7 @@ import type {
   TheosTool,
   XcodeTool,
 } from "@/bridge.ts";
-import { developmentTarget, type LaptopToolName } from "@/developmentSetup.ts";
+import { developmentTarget } from "@/developmentSetup.ts";
 import { InstallTool } from "@/renderer/development/InstallTool.tsx";
 import {
   Tool,
@@ -21,6 +21,8 @@ const { sdk: sdkName, sdkVersion, architecture } = developmentTarget;
 const sdkLabel = `iOS ${sdkVersion} SDK`;
 const homebrewInstaller =
   '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"';
+const ldidPurpose =
+  "It gives binaries the pseudo-signature iOS 9 needs before the kernel will run them.";
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction" });
 
 interface Installing {
@@ -94,7 +96,7 @@ function Homebrew({ homebrew }: { homebrew: LaptopTool | null }) {
     return (
       <Tool name="Homebrew" ready={false} value="Not installed" defaultOpen>
         <ToolCommands
-          note="Theos gets ldid and xz from Homebrew. Its installer asks for this computer's password, so run it in Terminal:"
+          note="Theos gets ldid from Homebrew. Its installer asks for this computer's password, so run it in Terminal:"
           commands={[homebrewInstaller]}
         />
       </Tool>
@@ -102,7 +104,7 @@ function Homebrew({ homebrew }: { homebrew: LaptopTool | null }) {
   }
   return (
     <Tool name="Homebrew" ready value={homebrew.version ?? "Installed"}>
-      <ToolNote>Installs ldid and xz, which Theos needs beside Xcode.</ToolNote>
+      <ToolNote>Installs ldid, which Theos needs beside Xcode.</ToolNote>
       <ToolDetails>
         <ToolDetail label="Location" mono>
           {homebrew.file}
@@ -240,39 +242,32 @@ function Sdk({
   );
 }
 
-function Formula({
-  tool,
-  installed,
+function Ldid({
+  ldid,
   homebrew,
-  purpose,
   disabled,
   onInstalled,
-}: Installing & {
-  tool: Extract<LaptopToolName, "ldid" | "xz">;
-  installed: LaptopTool | null;
-  homebrew: LaptopTool | null;
-  purpose: string;
-}) {
-  if (!installed) {
+}: Installing & { ldid: LaptopTool | null; homebrew: LaptopTool | null }) {
+  if (!ldid) {
     return (
       <InstallTool
-        tool={tool}
-        name={tool}
-        label={`Install ${tool}`}
+        tool="ldid"
+        name="ldid"
+        label="Install ldid"
         disabled={disabled || !homebrew}
         onInstalled={onInstalled}
       >
-        Runs brew install {tool}, which downloads {tool} and the libraries it
-        needs into Homebrew&apos;s folder. {purpose}
+        Runs brew install ldid, which downloads ldid and the libraries it needs
+        into Homebrew&apos;s folder. {ldidPurpose}
       </InstallTool>
     );
   }
   return (
-    <Tool name={tool} ready value={installed.version ?? "Installed"}>
-      <ToolNote>{purpose}</ToolNote>
+    <Tool name="ldid" ready value={ldid.version ?? "Installed"}>
+      <ToolNote>{ldidPurpose}</ToolNote>
       <ToolDetails>
         <ToolDetail label="Location" mono>
-          {installed.file}
+          {ldid.file}
         </ToolDetail>
       </ToolDetails>
     </Tool>
@@ -285,7 +280,6 @@ export function isToolchainReady({
   theos,
   sdk,
   ldid,
-  xz,
 }: LaptopToolchain): boolean {
   return (
     xcode !== null &&
@@ -295,8 +289,7 @@ export function isToolchainReady({
     theos.state === "installed" &&
     sdk !== null &&
     sdk.adjusted &&
-    ldid !== null &&
-    xz !== null
+    ldid !== null
   );
 }
 
@@ -304,27 +297,14 @@ export function Toolchain({
   toolchain,
   ...installing
 }: Installing & { toolchain: LaptopToolchain }) {
-  const { xcode, homebrew, theos, sdk, ldid, xz } = toolchain;
+  const { xcode, homebrew, theos, sdk, ldid } = toolchain;
   return (
     <ToolList>
       <Xcode xcode={xcode} />
       <Homebrew homebrew={homebrew} />
       <Theos toolchain={toolchain} {...installing} />
       <Sdk sdk={sdk} theos={theos} {...installing} />
-      <Formula
-        tool="ldid"
-        installed={ldid}
-        homebrew={homebrew}
-        purpose="It gives binaries the pseudo-signature iOS 9 needs before the kernel will run them."
-        {...installing}
-      />
-      <Formula
-        tool="xz"
-        installed={xz}
-        homebrew={homebrew}
-        purpose="Theos compresses packages with it."
-        {...installing}
-      />
+      <Ldid ldid={ldid} homebrew={homebrew} {...installing} />
     </ToolList>
   );
 }

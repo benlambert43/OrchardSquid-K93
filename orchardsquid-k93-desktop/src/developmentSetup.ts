@@ -4,6 +4,7 @@ export const developmentTarget = {
   minimumVersion: "9.0",
   architecture: "armv7",
   compilerFlags: "-marm",
+  packageCompression: "gzip",
   usbPort: 2222,
   sshHost: "ipad-usb",
 } as const;
@@ -14,7 +15,7 @@ export const theosSource = {
   sdkDownloads: "https://github.com/theos/sdks/releases/download/",
 } as const;
 
-export const laptopTools = ["theos", "sdk", "ldid", "xz"] as const;
+export const laptopTools = ["theos", "sdk", "ldid"] as const;
 
 export type LaptopToolName = (typeof laptopTools)[number];
 
@@ -62,5 +63,4 @@ export const firstInstallSteps: Record<LaptopToolName, DevelopmentStep> = {
   theos: "clone",
   sdk: "release",
   ldid: "homebrew",
-  xz: "homebrew",
 };
