@@ -2,6 +2,8 @@ import { app } from "electron";
 import { z } from "zod";
 
 import type { Requests } from "@/bridge.ts";
+import { appActions } from "@/appActions.ts";
+import { cleanUpOptions } from "@/cleanUpSteps.ts";
 import { exportSshBackup, restoreSshBackup } from "@/main/backupDialogs.ts";
 import {
   chooseTransport,
@@ -11,6 +13,7 @@ import {
   wifiAddressSchema,
 } from "@/main/connection.ts";
 import { readLaptopToolchain } from "@/main/development.ts";
+import { send } from "@/main/events.ts";
 import {
   openShell,
   resizeShell,
@@ -18,10 +21,12 @@ import {
   writeShell,
 } from "@/main/shell.ts";
 import {
+  changeIpadApp,
   checkWifiAddress,
   cleanUpIpad,
   findIpad,
   installZebraOnIpad,
+  readIpadApps,
   readIpadBatteryHealth,
   readIpadOnboarding,
   readIpadSoftware,
@@ -42,6 +47,12 @@ const terminalSizeSchema = z.object({
 
 const textSchema = z.string();
 
+const cleanUpOptionsSchema = z.array(z.enum(cleanUpOptions));
+
+const appIdSchema = z.string().min(1).max(255);
+
+const appActionSchema = z.enum(appActions);
+
 export const handlers: Handlers = {
   getAppVersion: () => app.getVersion(),
   readConnection,
@@ -58,8 +69,14 @@ export const handlers: Handlers = {
   readIpadBatteryHealth,
   readIpadSoftware,
   readLaptopToolchain,
-  cleanUpIpad,
+  cleanUpIpad: (options) =>
+    cleanUpIpad(cleanUpOptionsSchema.parse(options), (progress) => {
+      send("cleanUpProgress", progress);
+    }),
   installZebraOnIpad,
+  readIpadApps,
+  changeIpadApp: (id, action) =>
+    changeIpadApp(appIdSchema.parse(id), appActionSchema.parse(action)),
   exportSshBackup,
   restoreSshBackup,
   openShell: (size) => {

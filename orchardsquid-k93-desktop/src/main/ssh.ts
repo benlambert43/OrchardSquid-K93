@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 import { Client, type ParsedKey, utils } from "ssh2";
 
@@ -149,13 +150,15 @@ export function runForBytes(client: Client, command: string): Promise<Buffer> {
 export function runScript(
   client: Client,
   script: string,
-  timeoutMs: number,
+  quietTimeoutMs: number,
+  onLine?: (line: string) => void,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
+    const expire = () => {
       client.destroy();
       reject(new Error("The script on the iPad took too long"));
-    }, timeoutMs);
+    };
+    let timer = setTimeout(expire, quietTimeoutMs);
     client.exec("bash -s", (error, channel) => {
       if (error) {
         clearTimeout(timer);
@@ -163,12 +166,24 @@ export function runScript(
         return;
       }
       const output: Buffer[] = [];
+      const decoder = new StringDecoder();
+      let unfinished = "";
       channel.on("data", (chunk: Buffer) => {
         output.push(chunk);
+        clearTimeout(timer);
+        timer = setTimeout(expire, quietTimeoutMs);
+        if (onLine) {
+          const lines = (unfinished + decoder.write(chunk)).split("\n");
+          unfinished = lines.pop() ?? "";
+          lines.forEach(onLine);
+        }
       });
       channel.stderr.resume();
       channel.on("close", () => {
         clearTimeout(timer);
+        if (onLine && unfinished) {
+          onLine(unfinished);
+        }
         resolve(Buffer.concat(output).toString());
       });
       channel.end(script);

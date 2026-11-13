@@ -34,6 +34,8 @@ const bridge: Bridge = {
   readLaptopToolchain: invoke("readLaptopToolchain"),
   cleanUpIpad: invoke("cleanUpIpad"),
   installZebraOnIpad: invoke("installZebraOnIpad"),
+  readIpadApps: invoke("readIpadApps"),
+  changeIpadApp: invoke("changeIpadApp"),
   exportSshBackup: invoke("exportSshBackup"),
   restoreSshBackup: invoke("restoreSshBackup"),
   openShell: invoke("openShell"),
@@ -43,6 +45,7 @@ const bridge: Bridge = {
   onShellStatus: subscribe("shellStatus"),
   onShellReplay: subscribe("shellReplay"),
   onShellOutput: subscribe("shellOutput"),
+  onCleanUpProgress: subscribe("cleanUpProgress"),
 };
 
 contextBridge.exposeInMainWorld("bridge", bridge);

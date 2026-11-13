@@ -1,7 +1,10 @@
 import type { Client } from "ssh2";
 
 import type {
+  CleanUpProgress,
   Connection,
+  IpadAppChangeReport,
+  IpadAppsReport,
   IpadBatteryHealth,
   IpadCleanUpReport,
   IpadOnboarding,
@@ -13,6 +16,8 @@ import type {
   WifiCheck,
   ZebraInstallReport,
 } from "@/bridge.ts";
+import type { CleanUpOption } from "@/cleanUpSteps.ts";
+import type { AppAction } from "@/appActions.ts";
 import {
   IpadUnreachableError,
   probeIpadPort,
@@ -28,6 +33,7 @@ import {
   sshPort,
 } from "@/main/ssh.ts";
 import { derivePublicKey, readText } from "@/main/sshFiles.ts";
+import { changeApp, readApps } from "@/main/system/apps.ts";
 import { readBattery } from "@/main/system/battery.ts";
 import { readBatteryHealth } from "@/main/system/batteryHealth.ts";
 import { cleanUp } from "@/main/system/cleanUp.ts";
@@ -121,11 +127,33 @@ export async function readIpadSoftware(): Promise<IpadSoftwareReport> {
     : reached;
 }
 
-export async function cleanUpIpad(): Promise<IpadCleanUpReport> {
-  const reached = await inTurn(() => reach(cleanUp));
+export async function cleanUpIpad(
+  options: CleanUpOption[],
+  report: (progress: CleanUpProgress) => void,
+): Promise<IpadCleanUpReport> {
+  const reached = await inTurn(() =>
+    reach((client) => cleanUp(client, options, report)),
+  );
   return reached.state === "ok"
     ? { state: "ok", cleanUp: reached.reading }
     : reached;
+}
+
+export async function readIpadApps(): Promise<IpadAppsReport> {
+  const reached = await inTurn(() => reach(readApps));
+  return reached.state === "ok"
+    ? { state: "ok", apps: reached.reading }
+    : reached;
+}
+
+export async function changeIpadApp(
+  id: string,
+  action: AppAction,
+): Promise<IpadAppChangeReport> {
+  const reached = await inTurn(() =>
+    reach((client) => changeApp(client, id, action)),
+  );
+  return reached.state === "ok" ? reached.reading : reached;
 }
 
 export async function installZebraOnIpad(): Promise<ZebraInstallReport> {

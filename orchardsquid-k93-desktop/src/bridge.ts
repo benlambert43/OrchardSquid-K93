@@ -1,3 +1,6 @@
+import type { AppAction } from "@/appActions.ts";
+import type { CleanUpOption, CleanUpStep } from "@/cleanUpSteps.ts";
+
 export interface Ipad {
   name: string;
   productType: string;
@@ -162,6 +165,43 @@ export interface IpadCleanUp {
 export type IpadCleanUpReport =
   { state: "ok"; cleanUp: IpadCleanUp } | { state: "signed-out" } | Unreachable;
 
+export interface CleanUpProgress {
+  step: CleanUpStep;
+  item: string | null;
+  fraction: number;
+  seconds: number;
+}
+
+export type IpadAppKind = "stock" | "package" | "other";
+
+export interface IpadApp {
+  id: string;
+  name: string;
+  version: string | null;
+  kind: IpadAppKind;
+  package: string | null;
+  removed: boolean;
+  removable: boolean;
+  bytes: number;
+  services: string[];
+}
+
+export type IpadAppsReport =
+  { state: "ok"; apps: IpadApp[] } | { state: "signed-out" } | Unreachable;
+
+export type IpadAppChange =
+  | {
+      state: "changed";
+      homeScreenRefreshed: boolean;
+      links: number;
+      services: number;
+    }
+  | { state: "missing" }
+  | { state: "refused"; output: string };
+
+export type IpadAppChangeReport =
+  IpadAppChange | { state: "signed-out" } | Unreachable;
+
 export type ZebraInstall =
   | { state: "installed"; version: string; homeScreenRefreshed: boolean }
   | { state: "unavailable" }
@@ -209,8 +249,13 @@ export interface Requests {
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;
   readLaptopToolchain: () => Promise<LaptopToolchain>;
-  cleanUpIpad: () => Promise<IpadCleanUpReport>;
+  cleanUpIpad: (options: CleanUpOption[]) => Promise<IpadCleanUpReport>;
   installZebraOnIpad: () => Promise<ZebraInstallReport>;
+  readIpadApps: () => Promise<IpadAppsReport>;
+  changeIpadApp: (
+    id: string,
+    action: AppAction,
+  ) => Promise<IpadAppChangeReport>;
   exportSshBackup: () => Promise<SshBackupResult>;
   restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;
@@ -223,6 +268,7 @@ export interface Events {
   shellStatus: ShellStatus;
   shellReplay: Uint8Array;
   shellOutput: Uint8Array;
+  cleanUpProgress: CleanUpProgress;
 }
 
 export type Subscriptions = {

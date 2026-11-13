@@ -44,6 +44,16 @@ export function formatDateTime(time: number): string {
   }).format(time);
 }
 
+export function formatElapsed(seconds: number): string {
+  return new Intl.DurationFormat(undefined, {
+    style: "short",
+    secondsDisplay: "always",
+  }).format({
+    minutes: Math.floor(seconds / secondsPerMinute),
+    seconds: seconds % secondsPerMinute,
+  });
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / secondsPerMinute);
   return new Intl.DurationFormat(undefined, {
