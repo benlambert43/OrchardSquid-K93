@@ -18,10 +18,6 @@ export const laptopTools = ["theos", "sdk", "ldid", "xz"] as const;
 
 export type LaptopToolName = (typeof laptopTools)[number];
 
-export const laptopInstallOptions = ["shellProfile"] as const;
-
-export type LaptopInstallOption = (typeof laptopInstallOptions)[number];
-
 export const projectTemplates = {
   tool: "iphone/tool",
   application: "iphone/application_modern",
@@ -47,7 +43,6 @@ export type BuildOption = (typeof buildOptions)[number];
 export const developmentSteps = [
   "clone",
   "submodules",
-  "shellProfile",
   "release",
   "download",
   "unpack",

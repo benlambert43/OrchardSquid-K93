@@ -4,7 +4,6 @@ import type { LaptopInstall } from "@/bridge.ts";
 import {
   type DevelopmentStep,
   firstInstallSteps,
-  laptopInstallOptions,
   type LaptopToolName,
 } from "@/developmentSetup.ts";
 import { ConfirmButton } from "@/renderer/ConfirmButton.tsx";
@@ -56,7 +55,6 @@ export function InstallTool({
   busyLabel = "Installing…",
   firstStep = firstInstallSteps[tool],
   disabled,
-  fields,
   onInstalled,
   children,
 }: {
@@ -66,20 +64,14 @@ export function InstallTool({
   busyLabel?: string;
   firstStep?: DevelopmentStep;
   disabled: boolean;
-  fields?: ReactNode;
   onInstalled: () => Promise<unknown>;
   children: ReactNode;
 }) {
   const [outcome, action, isBusy] = useActionState(
-    async (_previous: Outcome, formData: FormData): Promise<Outcome> => {
-      const chosen = formData.getAll("option");
+    async (): Promise<Outcome> => {
       try {
         const report = await followDevelopment(
-          () =>
-            window.bridge.installLaptopTool(
-              tool,
-              laptopInstallOptions.filter((option) => chosen.includes(option)),
-            ),
+          () => window.bridge.installLaptopTool(tool),
           { task: tool, step: firstStep },
         );
         if (report.state === "installed") {
@@ -105,7 +97,6 @@ export function InstallTool({
           title={label}
           disabled={disabled || isBusy}
           action={action}
-          fields={fields}
         >
           {children}
         </ConfirmButton>

@@ -25,7 +25,7 @@ import {
   withProgress,
 } from "@/main/development/progress.ts";
 import { exclusively } from "@/main/development/tasks.ts";
-import { findTheosFolder } from "@/main/development/tools.ts";
+import { theosFolder } from "@/main/development/tools.ts";
 import { readSetting, writeSetting } from "@/main/settings.ts";
 import { readText } from "@/main/sshFiles.ts";
 import { installPackageOnIpad } from "@/main/system.ts";
@@ -159,7 +159,7 @@ export async function createDevelopmentProject(
   if (await exists(folder)) {
     return { state: "exists", folder: shortenHome(folder) };
   }
-  const theos = await findTheosFolder();
+  const theos = theosFolder();
   const { code, output } = await runProcess(
     perlFile,
     [
@@ -220,7 +220,7 @@ export async function buildDevelopmentProject(
   }
   return exclusively(() =>
     withProgress("build", "build", report, async (announce) => {
-      const theos = await findTheosFolder();
+      const theos = theosFolder();
       const { code, output } = await runProcess(
         makeFile,
         ["package", `TARGET=${target}`, `ARCHS=${architecture}`],

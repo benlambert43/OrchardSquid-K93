@@ -9,7 +9,6 @@ import {
   type DevelopmentStep,
   developmentTarget,
   firstInstallSteps,
-  type LaptopInstallOption,
   type LaptopToolName,
   theosSource,
 } from "@/developmentSetup.ts";
@@ -22,12 +21,7 @@ import {
   type ReportProgress,
   withProgress,
 } from "@/main/development/progress.ts";
-import { writeShellSetting } from "@/main/development/shellProfile.ts";
-import {
-  findTheosFolder,
-  findTool,
-  gitFile,
-} from "@/main/development/tools.ts";
+import { findTool, gitFile, theosFolder } from "@/main/development/tools.ts";
 
 const tarFile = "/usr/bin/tar";
 const quietTimeoutMs = 10 * 60 * 1000;
@@ -53,10 +47,7 @@ const releaseSchema = z.object({
 
 type Asset = z.infer<typeof releaseSchema>["assets"][number];
 
-type Installer = (
-  options: Set<LaptopInstallOption>,
-  announce: Announce,
-) => Promise<LaptopInstall>;
+type Installer = (announce: Announce) => Promise<LaptopInstall>;
 
 function followClone(folder: string, announce: Announce) {
   let clones = 0;
@@ -95,8 +86,8 @@ function followClone(folder: string, announce: Announce) {
   };
 }
 
-const installTheos: Installer = async (options, announce) => {
-  const folder = await findTheosFolder();
+const installTheos: Installer = async (announce) => {
+  const folder = theosFolder();
   const entries = await readdir(folder).catch((): string[] => []);
   if (!entries.includes("makefiles")) {
     if (entries.length > 0) {
@@ -118,10 +109,6 @@ const installTheos: Installer = async (options, announce) => {
     } finally {
       await rm(staging, { recursive: true, force: true });
     }
-  }
-  if (options.has("shellProfile")) {
-    announce("shellProfile");
-    await writeShellSetting(folder);
   }
   return { state: "installed" };
 };
@@ -194,8 +181,8 @@ function matches(file: Buffer, { size, digest }: Asset): boolean {
   );
 }
 
-const installSdk: Installer = async (_options, announce) => {
-  const theos = await findTheosFolder();
+const installSdk: Installer = async (announce) => {
+  const theos = theosFolder();
   const sdks = path.join(theos, "sdks");
   const target = path.join(sdks, sdkFolder);
   if (await exists(target)) {
@@ -241,7 +228,7 @@ const installSdk: Installer = async (_options, announce) => {
 };
 
 function installFormula(name: string): Installer {
-  return async (_options, announce) => {
+  return async (announce) => {
     const brew = await findTool("brew");
     if (!brew) {
       return { state: "failed", output: "Homebrew is not installed." };
@@ -269,7 +256,7 @@ const installers: Record<LaptopToolName, Installer> = {
 };
 
 async function findFirstStep(tool: LaptopToolName): Promise<DevelopmentStep> {
-  const sdk = path.join(await findTheosFolder(), "sdks", sdkFolder);
+  const sdk = path.join(theosFolder(), "sdks", sdkFolder);
   return tool === "sdk" && (await exists(sdk))
     ? "adjust"
     : firstInstallSteps[tool];
@@ -277,7 +264,6 @@ async function findFirstStep(tool: LaptopToolName): Promise<DevelopmentStep> {
 
 export function installLaptopTool(
   tool: LaptopToolName,
-  options: LaptopInstallOption[],
   report: ReportProgress,
 ): Promise<LaptopInstall> {
   return exclusively(async () => {
@@ -286,7 +272,7 @@ export function installLaptopTool(
         tool,
         await findFirstStep(tool),
         report,
-        (announce) => installers[tool](new Set(options), announce),
+        (announce) => installers[tool](announce),
       );
     } catch (error) {
       console.error(`${tool} could not be installed`, error);

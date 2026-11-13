@@ -13,9 +13,8 @@ import type {
 import { developmentTarget } from "@/developmentSetup.ts";
 import { exists, shortenHome } from "@/main/development/paths.ts";
 import { isSdkAdjusted } from "@/main/development/sdk.ts";
-import { readShellSetting } from "@/main/development/shellProfile.ts";
 import {
-  findTheosFolder,
+  theosFolder,
   findTool,
   gitFile,
   output,
@@ -82,7 +81,6 @@ async function listSdks(theos: string): Promise<string[]> {
 }
 
 async function readTheos(folder: string): Promise<TheosTool> {
-  const shell = await readShellSetting();
   const entries = await readdir(folder).catch((): string[] => []);
   if (!entries.includes("makefiles")) {
     return {
@@ -94,7 +92,6 @@ async function readTheos(folder: string): Promise<TheosTool> {
       branch: null,
       source: null,
       sdks: [],
-      shell,
     };
   }
   const git = (...args: string[]) =>
@@ -116,7 +113,6 @@ async function readTheos(folder: string): Promise<TheosTool> {
     branch,
     source,
     sdks,
-    shell,
   };
 }
 
@@ -148,7 +144,7 @@ async function readSdk(theos: string): Promise<SdkTool | null> {
 }
 
 export async function readLaptopToolchain(): Promise<LaptopToolchain> {
-  const folder = await findTheosFolder();
+  const folder = theosFolder();
   const [xcode, homebrew, theos, sdk, ldid, xz] = await Promise.all([
     readXcode(),
     readHomebrew(),

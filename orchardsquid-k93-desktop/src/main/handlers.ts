@@ -6,7 +6,6 @@ import { appActions } from "@/appActions.ts";
 import { cleanUpOptions } from "@/cleanUpSteps.ts";
 import {
   buildOptions,
-  laptopInstallOptions,
   laptopTools,
   packageIdPattern,
   projectNamePattern,
@@ -83,8 +82,6 @@ const appActionSchema = z.enum(appActions);
 
 const laptopToolSchema = z.enum(laptopTools);
 
-const laptopInstallOptionsSchema = z.array(z.enum(laptopInstallOptions));
-
 const projectTemplateSchema = z.enum(
   Object.keys(projectTemplates) as (keyof typeof projectTemplates)[],
 );
@@ -121,12 +118,8 @@ export const handlers: Handlers = {
   readIpadBatteryHealth,
   readIpadSoftware,
   readLaptopToolchain,
-  installLaptopTool: (tool, options) =>
-    installLaptopTool(
-      laptopToolSchema.parse(tool),
-      laptopInstallOptionsSchema.parse(options),
-      reportDevelopment,
-    ),
+  installLaptopTool: (tool) =>
+    installLaptopTool(laptopToolSchema.parse(tool), reportDevelopment),
   readUsbTunnel,
   startUsbTunnel,
   stopUsbTunnel,

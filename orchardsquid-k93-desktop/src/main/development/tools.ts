@@ -3,13 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { exists, fromHome } from "@/main/development/paths.ts";
-import { readShellSetting } from "@/main/development/shellProfile.ts";
+import { exists } from "@/main/development/paths.ts";
 
 const run = promisify(execFile);
 
 export const gitFile = "/usr/bin/git";
 
+const appFolder = ".orchardsquid-k93";
 const homebrewFolders = ["/opt/homebrew/bin", "/usr/local/bin"];
 const systemPath = "/usr/bin:/bin:/usr/sbin:/sbin";
 const checkTimeoutMs = 10_000;
@@ -61,10 +61,6 @@ export function toolEnvironment(): NodeJS.ProcessEnv {
   };
 }
 
-export async function findTheosFolder(): Promise<string> {
-  if (process.env.THEOS) {
-    return process.env.THEOS;
-  }
-  const { value } = await readShellSetting();
-  return value ? fromHome(value) : path.join(os.homedir(), "theos");
+export function theosFolder(): string {
+  return path.join(os.homedir(), appFolder, "theos");
 }

@@ -17,7 +17,3 @@ export function shortenHome(file: string): string {
     ? `~${file.slice(home.length)}`
     : file;
 }
-
-export function fromHome(file: string): string {
-  return file.replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, os.homedir());
-}

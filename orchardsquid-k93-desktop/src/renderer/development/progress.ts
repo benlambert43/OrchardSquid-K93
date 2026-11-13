@@ -21,7 +21,6 @@ export function followDevelopment<Result>(
 export const stepLabels: Record<DevelopmentStep, string> = {
   clone: "Cloning Theos",
   submodules: "Cloning Theos's submodules",
-  shellProfile: "Adding THEOS to the shell profile",
   release: "Looking up the newest SDK release",
   download: "Downloading the SDK",
   unpack: "Unpacking the SDK",

@@ -1,6 +1,3 @@
-import { DetailNote } from "@orchardsquid-k93/ui";
-import { useId } from "react";
-
 import type {
   LaptopTool,
   LaptopToolchain,
@@ -115,29 +112,6 @@ function Homebrew({ homebrew }: { homebrew: LaptopTool | null }) {
   );
 }
 
-function ShellProfileOption({ theos }: { theos: TheosTool }) {
-  const id = useId();
-  return (
-    <div className="flex items-start gap-2.5">
-      <input
-        id={id}
-        type="checkbox"
-        name="option"
-        value="shellProfile"
-        defaultChecked
-        className="mt-0.5 size-4 shrink-0 accent-emerald-600"
-      />
-      <label htmlFor={id}>
-        <span className="font-medium">Add THEOS to {theos.shell.file}</span>
-        <DetailNote>
-          Adds the line export THEOS={theos.folder}, so that make and nic.pl
-          find Theos in new Terminal windows.
-        </DetailNote>
-      </label>
-    </div>
-  );
-}
-
 function Theos({
   toolchain: { theos, xcode },
   disabled,
@@ -161,13 +135,11 @@ function Theos({
         label="Install Theos"
         disabled={disabled || !xcode?.full}
         onInstalled={onInstalled}
-        fields={
-          theos.shell.file !== null &&
-          theos.shell.value === null && <ShellProfileOption theos={theos} />
-        }
       >
         Clones Theos and its submodules from github.com/theos/theos into{" "}
-        {theos.folder}, a download of about 16 MB. Nothing runs as root.
+        {theos.folder}, a download of about 16 MB. Only this app uses that copy:
+        Xcode, Terminal and the shell profile are left as they are. Nothing runs
+        as root.
       </InstallTool>
     );
   }
@@ -175,7 +147,8 @@ function Theos({
     <Tool name="Theos" ready value={theos.version ?? "Installed"}>
       <ToolNote>
         Builds a project with make, packages it as a .deb file and installs it
-        on the iPad.
+        on the iPad. This copy belongs to the app, which gives it to make on
+        each build, so Xcode and Terminal never see it.
       </ToolNote>
       <ToolDetails>
         <ToolDetail label="Folder" mono>
@@ -197,21 +170,10 @@ function Theos({
             {theos.committedAt && `, ${formatDate(theos.committedAt)}`}
           </ToolDetail>
         )}
-        <ToolDetail label="Shell profile">
-          {theos.shell.value
-            ? `${theos.shell.file ?? "The profile"} sets THEOS to ${theos.shell.value}`
-            : "THEOS is not set, so Terminal does not find Theos yet"}
-        </ToolDetail>
         <ToolDetail label="SDKs">
           {theos.sdks.length > 0 ? listFormat.format(theos.sdks) : "None"}
         </ToolDetail>
       </ToolDetails>
-      {theos.shell.value === null && theos.shell.file !== null && (
-        <ToolCommands
-          note={`Add this line to ${theos.shell.file}:`}
-          commands={[`export THEOS=${theos.folder}`]}
-        />
-      )}
     </Tool>
   );
 }

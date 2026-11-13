@@ -4,7 +4,6 @@ import type {
   BuildOption,
   DevelopmentStep,
   DevelopmentTask,
-  LaptopInstallOption,
   LaptopToolName,
   ProjectTemplate,
 } from "@/developmentSetup.ts";
@@ -167,11 +166,6 @@ export interface XcodeTool {
   armv7: boolean;
 }
 
-export interface ShellSetting {
-  file: string | null;
-  value: string | null;
-}
-
 export interface TheosTool {
   folder: string;
   state: "installed" | "absent" | "occupied";
@@ -181,7 +175,6 @@ export interface TheosTool {
   branch: string | null;
   source: string | null;
   sdks: string[];
-  shell: ShellSetting;
 }
 
 export interface SdkTool {
@@ -411,10 +404,7 @@ export interface Requests {
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;
   readLaptopToolchain: () => Promise<LaptopToolchain>;
-  installLaptopTool: (
-    tool: LaptopToolName,
-    options: LaptopInstallOption[],
-  ) => Promise<LaptopInstall>;
+  installLaptopTool: (tool: LaptopToolName) => Promise<LaptopInstall>;
   readUsbTunnel: () => Promise<UsbTunnel>;
   startUsbTunnel: () => Promise<UsbTunnelStart>;
   stopUsbTunnel: () => Promise<void>;
