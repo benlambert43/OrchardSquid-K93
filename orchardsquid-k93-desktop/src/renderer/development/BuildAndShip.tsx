@@ -430,8 +430,8 @@ function Project({
           fields={<InstallOption />}
         >
           Runs make package in {project.folder} for iOS {sdkVersion} on{" "}
-          {architecture}. That compiles the project, signs it with ldid and
-          wraps it in a .deb file in its packages folder.
+          {architecture}. That compiles the project in ARM mode, signs it with
+          ldid and wraps it in a .deb file in its packages folder.
         </ConfirmButton>
       }
     >

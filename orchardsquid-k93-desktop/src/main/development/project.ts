@@ -42,7 +42,8 @@ const createTimeoutMs = 60 * 1000;
 const buildTimeoutMs = 10 * 60 * 1000;
 const editorTimeoutMs = 30 * 1000;
 
-const { sdkVersion, minimumVersion, architecture } = developmentTarget;
+const { sdkVersion, minimumVersion, architecture, compilerFlags } =
+  developmentTarget;
 const target = `iphone:clang:${sdkVersion}:${minimumVersion}`;
 
 const theosMakefile = /\$\(THEOS(?:_MAKE_PATH)?\)/;
@@ -225,7 +226,7 @@ export async function buildDevelopmentProject(
         ["package", `TARGET=${target}`, `ARCHS=${architecture}`],
         {
           cwd: folder,
-          env: { THEOS: theos },
+          env: { THEOS: theos, ADDITIONAL_CFLAGS: compilerFlags },
           quietTimeoutMs: buildTimeoutMs,
           onLine: (line) => {
             const stage = buildStage.exec(line)?.[1];
