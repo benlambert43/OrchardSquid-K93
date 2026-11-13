@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const site = {
   name: "OrchardSquid-K93",
-  description: "OrchardSquid-K93 toolchain",
+  description: "All-in-one admin tool for an iPad 2",
 };
 
 export const siteOpenGraph = {

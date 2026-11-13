@@ -4,7 +4,6 @@ import express from "express";
 
 import { handleError, notFound } from "./errors.ts";
 import { checkDatabase } from "./health.ts";
-import { notesRouter } from "./notes.ts";
 import { serverEnv } from "./serverEnv.ts";
 
 const app = express();
@@ -23,7 +22,6 @@ app.get("/api/v1/health", async (_req, res) => {
   res.status(database === "ok" ? 200 : 503).json(body);
 });
 
-app.use("/api/v1/notes", notesRouter);
 app.use(notFound);
 app.use(handleError);
 

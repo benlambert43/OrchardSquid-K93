@@ -1,6 +1,8 @@
 # OrchardSquid-K93
 
-OrchardSquid-K93 toolchain
+An all-in-one tool for administering and modifying an iPad 2 (K93, iPad2,1) from a computer. The desktop app reaches the iPad over USB, and the web app, the API, and the database grow alongside it as admin operations are added.
+
+So far the apps show a status list: the API, the database, and, in the desktop app, the iPad attached by USB with its name, model, and iOS version. See [iPad](#ipad) for how the connection works.
 
 | Workspace                  | What it is                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------ |
@@ -73,12 +75,12 @@ Scripts such as `dev`, `build`, and `db:generate` hand over to a workspace's scr
 | `npm run db:migrate`  | Applies pending migrations to a running database; `db:start` runs it for you                                                      |
 | `npm run db:studio`   | Opens Drizzle Studio to browse the database                                                                                       |
 
-To change the schema, edit `schema.ts`, then run `db:generate` and `db:migrate`.
+The schema has no tables yet. To add one, define it in `schema.ts`, then run `db:generate` and `db:migrate`.
 
 ```sh
-npm run db:generate --workspace orchardsquid-k93-server -- --name add_tags              # names the migration file
-npm run db:generate --workspace orchardsquid-k93-server -- --custom --name seed_notes   # empty migration for SQL of your own
-npm run db:studio --workspace orchardsquid-k93-server -- --port 5000                    # Drizzle Studio on another port
+npm run db:generate --workspace orchardsquid-k93-server -- --name add_devices          # names the migration file
+npm run db:generate --workspace orchardsquid-k93-server -- --custom --name seed_data   # empty migration for SQL of your own
+npm run db:studio --workspace orchardsquid-k93-server -- --port 5000                   # Drizzle Studio on another port
 ```
 
 ### Checks
@@ -111,10 +113,12 @@ The pre-commit hook runs lint-staged on the staged files: every workspace is typ
 | `npm run test:coverage` | Reports coverage in the terminal and as HTML in `coverage/`                                     |
 | `npm run test:shared`   | Runs one workspace; the others have a script of their own, such as `test:server` and `test:web` |
 
+`orchardsquid-k93-shared` and `orchardsquid-k93-server` have no tests yet, so their projects pass with no test files.
+
 ```sh
-npm test -- orchardsquid-k93-shared/src/notes.test.ts   # one file
-npm test -- -t "Hello World"                    # tests whose name matches
-npm run test:watch -- --project orchardsquid-k93-web    # watches one workspace
+npm test -- orchardsquid-k93-ui/src/AppShell.test.tsx   # one file
+npm test -- -t "Hello World"                           # tests whose name matches
+npm run test:watch -- --project orchardsquid-k93-web   # watches one workspace
 ```
 
 ### Cleaning up
@@ -132,46 +136,42 @@ npm run clean:dry-run -- --force   # lists what clean:force would remove
 
 ## API
 
-`orchardsquid-k93-server` serves JSON on `http://localhost:4000`. Every route but the health check reads or writes the `notes` table. Errors are JSON as well, in the form `{"error": "..."}`: 404 for an unknown route, 400 for a body that is not valid JSON, and 500 for a failure the API did not expect, which it logs.
+`orchardsquid-k93-server` serves JSON on `http://localhost:4000`. Errors are JSON as well, in the form `{"error": "..."}`: 404 for an unknown route, 400 for a body that is not valid JSON, and 500 for a failure the API did not expect, which it logs.
 
-| Route                      | What it does                                                                                                                |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/health`       | Reports whether the API reaches the database; answers 503 when it does not                                                  |
-| `GET /api/v1/notes`        | Lists the notes, newest first                                                                                               |
-| `POST /api/v1/notes`       | Creates a note from `{"body": "..."}` and answers 201 with it, or 400 when the body is empty or longer than 1000 characters |
-| `PATCH /api/v1/notes/:id`  | Replaces a note's body, under the same rules; 404 for an unknown id                                                         |
-| `DELETE /api/v1/notes/:id` | Deletes a note and answers 204; 404 for an unknown id                                                                       |
+| Route                | What it does                                                               |
+| -------------------- | -------------------------------------------------------------------------- |
+| `GET /api/v1/health` | Reports whether the API reaches the database; answers 503 when it does not |
 
 ```sh
 curl http://localhost:4000/api/v1/health
-curl http://localhost:4000/api/v1/notes
-curl -X POST http://localhost:4000/api/v1/notes -H 'content-type: application/json' -d '{"body":"Hello World"}'
 ```
+
+New routes go in a router of their own in `orchardsquid-k93-server/src`, mounted under `/api/v1` in `src/index.ts`, with their request and response schemas in `orchardsquid-k93-shared` and a method for each on the client from `createApiClient`.
 
 ## Where the code lives
 
-The notes page is a worked example of the whole path, from the database to the components.
+The status list is the path from the API to the components that every new feature follows.
 
-| Layer                                      | Where                                                                               |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Table and migrations                       | `orchardsquid-k93-server/src/schema.ts` and `orchardsquid-k93-server/drizzle`       |
-| Routes                                     | `orchardsquid-k93-server/src/notes.ts`, mounted in `src/index.ts`                   |
-| Error responses                            | `orchardsquid-k93-server/src/errors.ts`                                             |
-| Server environment                         | `orchardsquid-k93-server/src/serverEnv.ts`, parsed with Zod when the API starts     |
-| Schemas and types                          | `orchardsquid-k93-shared/src/notes.ts` and `src/health.ts`                          |
-| API client                                 | `orchardsquid-k93-shared/src/apiClient.ts`                                          |
-| Form logic                                 | `orchardsquid-k93-shared/src/noteActions.ts`                                        |
-| Components and theme                       | `orchardsquid-k93-ui/src`                                                           |
-| Web page, data loading, and server actions | `orchardsquid-k93-web/app/page.tsx`, `app/_components`, and `app/_actions/notes.ts` |
+| Layer                       | Where                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| Tables and migrations       | `orchardsquid-k93-server/src/schema.ts` and `orchardsquid-k93-server/drizzle`   |
+| Routes                      | `orchardsquid-k93-server/src/index.ts`                                          |
+| Error responses             | `orchardsquid-k93-server/src/errors.ts`                                         |
+| Server environment          | `orchardsquid-k93-server/src/serverEnv.ts`, parsed with Zod when the API starts |
+| Schemas and types           | `orchardsquid-k93-shared/src/health.ts`                                         |
+| API client                  | `orchardsquid-k93-shared/src/apiClient.ts`                                      |
+| Components and theme        | `orchardsquid-k93-ui/src`                                                       |
+| Web page and data loading   | `orchardsquid-k93-web/app/page.tsx` and `app/_components`                       |
+| Desktop window and the iPad | `orchardsquid-k93-desktop/src`; see [Desktop app](#desktop-app)                 |
 
 ## Shared components
 
 `orchardsquid-k93-ui` holds the components that look and behave the same wherever they are shown. An app only decides what data they get and what happens when they are used.
 
 - **Props only.** Components take their data and their actions as props. They never fetch, read the environment, or import a framework, and ESLint refuses `next` and `node:` imports in the package.
-- **Logic sits beside the schemas.** In `orchardsquid-k93-shared`, `submitNewNote`, `submitNoteEdit`, and `submitNoteDelete` parse the input, call the API, and return failures as values, and `createApiClient` builds the client that each app gives its API address. The package runs in Node.js and in browser windows alike, so ESLint refuses browser-only globals there.
-- **The web app supplies data from the server.** `app/_components/Notes.tsx` loads the notes in a server component and passes the server actions in `app/_actions/notes.ts`, which refresh the page after a change. The rules for a note stay in the API.
-- **The desktop app supplies data from the window.** `orchardsquid-k93-desktop/src/renderer/Notes.tsx` fetches the notes itself and passes functions that call the API directly.
+- **Logic sits beside the schemas.** In `orchardsquid-k93-shared`, logic that both apps need, such as parsing a form and calling the API, returns failures as values, and `createApiClient` builds the client that each app gives its API address. The package runs in Node.js and in browser windows alike, so ESLint refuses browser-only globals there.
+- **The web app supplies data from the server.** `app/_components/StatusChecks.tsx` loads the API's health in a server component and hands it to the shared components. Changes from a form go through server actions, which refresh the page afterwards.
+- **The desktop app supplies data from the window.** `orchardsquid-k93-desktop/src/renderer/StatusChecks.tsx` calls the API directly, and asks the main process over the bridge for what only it can reach, such as the iPad.
 - **`"use client"` where needed.** Components with state or event handlers start with it, which lets the App Router render them from server components. The others have no directive, so they can render on the server as well.
 - **One theme.** `src/theme.css` is the one place for colors and fonts, and it tells Tailwind to scan the package for class names. Each app's `globals.css` imports it after `tailwindcss` and provides the fonts behind `--font-geist-sans` and `--font-geist-mono` in its own way.
 - **No build step.** The apps compile the package from source, as they do `@orchardsquid-k93/shared`, so an edit hot-reloads in every app that is running.
@@ -251,18 +251,18 @@ VITE_API_BASE_URL=https://api.example.com npm run make:desktop   # a release tha
 
 Paths are inside `orchardsquid-k93-desktop`.
 
-| File                                         | What it holds                                                                                                                    |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `src/renderer/api.ts`                        | The shared API client, pointed at `VITE_API_BASE_URL`                                                                            |
-| `src/renderer/Notes.tsx`, `StatusChecks.tsx` | Load the data and hand it to the shared components                                                                               |
-| `src/env.ts`                                 | The environment, parsed with Zod when the app starts                                                                             |
-| `src/bridge.ts`                              | The `Bridge` interface, which lists every call the window can make to the main process; the two files below are typed against it |
-| `src/preload/index.ts`                       | Exposes one function per `Bridge` method as `window.bridge`, and nothing else                                                    |
-| `src/main/handlers.ts`                       | Implements each method                                                                                                           |
-| `src/main/usbmux.ts`                         | Talks to `usbmuxd`: finds a device attached by USB and opens a connection to a TCP port on it                                    |
-| `src/main/ipad.ts`                           | Finds the iPad 2 and asks it for its name, model, and iOS version                                                                |
-| `src/main/index.ts`                          | The window, and the security rules listed below                                                                                  |
-| `forge.config.ts`                            | Electron Forge: packaging, the Vite builds, and the fuses                                                                        |
+| File                            | What it holds                                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/renderer/api.ts`           | The shared API client, pointed at `VITE_API_BASE_URL`                                                                            |
+| `src/renderer/StatusChecks.tsx` | Loads the data and hands it to the shared components                                                                             |
+| `src/env.ts`                    | The environment, parsed with Zod when the app starts                                                                             |
+| `src/bridge.ts`                 | The `Bridge` interface, which lists every call the window can make to the main process; the two files below are typed against it |
+| `src/preload/index.ts`          | Exposes one function per `Bridge` method as `window.bridge`, and nothing else                                                    |
+| `src/main/handlers.ts`          | Implements each method                                                                                                           |
+| `src/main/usbmux.ts`            | Talks to `usbmuxd`: finds a device attached by USB and opens a connection to a TCP port on it                                    |
+| `src/main/ipad.ts`              | Finds the iPad 2 and asks it for its name, model, and iOS version                                                                |
+| `src/main/index.ts`             | The window, and the security rules listed below                                                                                  |
+| `forge.config.ts`               | Electron Forge: packaging, the Vite builds, and the fuses                                                                        |
 
 The bridge is for what only the main process can do, such as reporting the app version and reaching the iPad. To add a call, add it to `Bridge`. TypeScript then fails until the preload script exposes it and `handlers.ts` implements it.
 

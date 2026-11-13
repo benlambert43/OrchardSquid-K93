@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    passWithNoTests: true,
     projects: [
       "orchardsquid-k93-shared",
       "orchardsquid-k93-ui",
