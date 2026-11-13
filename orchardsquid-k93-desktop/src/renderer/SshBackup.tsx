@@ -1,7 +1,8 @@
-import { Button, Panel, PanelNote } from "@orchardsquid-k93/ui";
+import { Panel } from "@orchardsquid-k93/ui";
 import { useActionState } from "react";
 
 import type { SshBackupResult, SshRestoreResult } from "@/bridge.ts";
+import { ConfirmButton } from "@/renderer/ConfirmButton.tsx";
 
 type Intent = "export" | "restore";
 
@@ -11,9 +12,7 @@ type Outcome =
   | { state: "failed"; intent: Intent }
   | null;
 
-async function run(_previous: Outcome, formData: FormData): Promise<Outcome> {
-  const intent: Intent =
-    formData.get("intent") === "restore" ? "restore" : "export";
+async function run(_previous: Outcome, intent: Intent): Promise<Outcome> {
   try {
     return intent === "restore"
       ? await window.bridge.restoreSshBackup()
@@ -41,7 +40,7 @@ function describe(outcome: Outcome): string | null {
         .filter(Boolean)
         .join(" ");
     case "no-key":
-      return "There is no key at ~/.ssh/orchardsquid-k93 to back up. The README explains how to create one.";
+      return "There is no key at ~/.ssh/orchardsquid-k93 to back up. The Onboarding page shows how to create one.";
     case "invalid":
       return "That file is not an SSH backup this app can read. Nothing was changed.";
     case "failed":
@@ -60,20 +59,31 @@ export function SshBackup() {
 
   return (
     <Panel title="SSH backup">
-      <PanelNote>
-        Export saves this computer&apos;s key for the iPad, and the SSH settings
-        that go with it, as a zip file. Restore reads such a file back in, which
-        is how another computer gets to sign in. Whoever has the file can sign
-        in to the iPad as root, so keep it somewhere safe.
-      </PanelNote>
-      <form action={action} className="flex flex-wrap gap-3 py-2.5">
-        <Button type="submit" name="intent" value="export" disabled={isBusy}>
-          Export backup…
-        </Button>
-        <Button type="submit" name="intent" value="restore" disabled={isBusy}>
-          Restore backup…
-        </Button>
-      </form>
+      <div className="flex flex-wrap gap-3 py-2.5">
+        <ConfirmButton
+          label="Export backup…"
+          title="Export backup"
+          disabled={isBusy}
+          action={() => {
+            action("export");
+          }}
+        >
+          Saves this computer&apos;s key for the iPad, and the SSH settings that
+          go with it, as a zip file. Whoever has the file can sign in to the
+          iPad as root, so keep it somewhere safe.
+        </ConfirmButton>
+        <ConfirmButton
+          label="Restore backup…"
+          title="Restore backup"
+          disabled={isBusy}
+          action={() => {
+            action("restore");
+          }}
+        >
+          Reads an exported backup file back in, which is how another computer
+          gets to sign in to the iPad.
+        </ConfirmButton>
+      </div>
       {message && (
         <p
           role="status"

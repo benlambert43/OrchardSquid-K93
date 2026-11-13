@@ -17,7 +17,9 @@ export function SoftwareDetails({ software }: { software: IpadSoftware }) {
       <Detail label="OpenSSL">{software.openssl ?? missing}</Detail>
       <Detail label="Safari">{software.safari ?? missing}</Detail>
       <Detail label="WebKit">{software.webkit ?? missing}</Detail>
-      <Detail label="Packages">{formatNumber(software.packages.length)}</Detail>
+      <Detail label="Packages">
+        {formatNumber(software.packages.length + software.userDefaultPackages)}
+      </Detail>
     </DetailList>
   );
 }

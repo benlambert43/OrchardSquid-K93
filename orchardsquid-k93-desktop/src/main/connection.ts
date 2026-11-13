@@ -3,7 +3,7 @@ import net from "node:net";
 
 import { z } from "zod";
 
-import type { Connection, Transport } from "@/bridge.ts";
+import type { Connection, IpadPort, Transport } from "@/bridge.ts";
 import { readSetting, writeSetting } from "@/main/settings.ts";
 import { findUsbDevice, openPort } from "@/main/usbmux.ts";
 import { describeUnreachable } from "@/unreachable.ts";
@@ -77,4 +77,20 @@ export async function openIpadPort(
   }
   const deviceId = await findUsbDevice(k93UsbProductId);
   return deviceId === undefined ? null : openPort(deviceId, port);
+}
+
+export async function probeIpadPort(
+  port: number,
+  connection: Connection = readConnection(),
+): Promise<IpadPort> {
+  const absent =
+    connection.transport === "wifi"
+      ? connection.address === null
+      : (await findUsbDevice(k93UsbProductId)) === undefined;
+  if (absent) {
+    return "absent";
+  }
+  const socket = await openIpadPort(port, connection).catch(() => null);
+  socket?.destroy();
+  return socket ? "open" : "closed";
 }

@@ -1,10 +1,16 @@
 import { useSyncExternalStore } from "react";
 
 export type PageName =
-  "dashboard" | "dependencies" | "development" | "shell" | "settings";
+  | "dashboard"
+  | "onboarding"
+  | "dependencies"
+  | "development"
+  | "shell"
+  | "settings";
 
 export const pageLinks: Record<PageName, string> = {
   dashboard: "#/",
+  onboarding: "#/onboarding",
   dependencies: "#/dependencies",
   development: "#/development",
   shell: "#/shell",
@@ -20,6 +26,8 @@ function subscribe(onChange: () => void): () => void {
 
 function currentPage(): PageName {
   switch (window.location.hash) {
+    case pageLinks.onboarding:
+      return "onboarding";
     case pageLinks.dependencies:
       return "dependencies";
     case pageLinks.development:

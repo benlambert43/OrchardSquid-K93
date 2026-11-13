@@ -1,4 +1,5 @@
 import { DetailNote, PanelNote } from "@orchardsquid-k93/ui";
+import type { ReactNode } from "react";
 
 import { formatNumber } from "@/renderer/format.ts";
 import { Command } from "@/renderer/Command.tsx";
@@ -10,6 +11,7 @@ export interface Step {
   state: StepState;
   detail: string;
   command?: string | undefined;
+  action?: ReactNode;
 }
 
 export interface StepGroup {
@@ -45,18 +47,19 @@ export function StepList({ groups }: { groups: StepGroup[] }) {
             {title}
           </h3>
           <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {groupSteps.map(({ label, state, detail, command }) => (
+            {groupSteps.map(({ label, state, detail, command, action }) => (
               <li key={label} className="flex items-start gap-3 py-2.5">
                 <span
                   aria-hidden
                   className={`mt-1.5 size-2.5 shrink-0 rounded-full
                   ${indicatorClassNames[state]}`}
                 />
-                <span className="min-w-0 font-medium wrap-anywhere">
+                <div className="min-w-0 font-medium wrap-anywhere">
                   {label}
                   {command && <Command>{command}</Command>}
                   <DetailNote>{detail}</DetailNote>
-                </span>
+                  {action}
+                </div>
                 <span
                   className="ml-auto shrink-0 text-zinc-600 dark:text-zinc-400"
                 >

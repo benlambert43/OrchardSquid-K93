@@ -4,20 +4,30 @@ import type {
   Connection,
   IpadBatteryHealth,
   IpadCleanUpReport,
+  IpadOnboarding,
   IpadReport,
   IpadSoftwareReport,
   IpadSystem,
   IpadSystemReport,
   Unreachable,
   WifiCheck,
+  ZebraInstallReport,
 } from "@/bridge.ts";
 import {
   IpadUnreachableError,
+  probeIpadPort,
   readConnection,
   rememberWifiAddress,
 } from "@/main/connection.ts";
 import { findIpadOverUsb } from "@/main/ipad.ts";
-import { connectSsh, SignInRefusedError } from "@/main/ssh.ts";
+import { readSetting, writeSetting } from "@/main/settings.ts";
+import {
+  connectSsh,
+  keyPath,
+  SignInRefusedError,
+  sshPort,
+} from "@/main/ssh.ts";
+import { derivePublicKey, readText } from "@/main/sshFiles.ts";
 import { readBattery } from "@/main/system/battery.ts";
 import { readBatteryHealth } from "@/main/system/batteryHealth.ts";
 import { cleanUp } from "@/main/system/cleanUp.ts";
@@ -25,8 +35,13 @@ import { readCpu } from "@/main/system/cpu.ts";
 import { readCrashReports } from "@/main/system/crashReports.ts";
 import { readIdentity } from "@/main/system/identity.ts";
 import { readNetwork } from "@/main/system/network.ts";
+import { readDefaultPasswordAccounts } from "@/main/system/passwords.ts";
 import { readSoftware } from "@/main/system/software.ts";
 import { readStats } from "@/main/system/stats.ts";
+import { installZebra } from "@/main/system/zebra.ts";
+import { clientName } from "@/main/usbmux.ts";
+
+const onboardingSetting = "onboardingComplete";
 
 type Reached<Reading> =
   { state: "ok"; reading: Reading } | { state: "signed-out" } | Unreachable;
@@ -113,6 +128,11 @@ export async function cleanUpIpad(): Promise<IpadCleanUpReport> {
     : reached;
 }
 
+export async function installZebraOnIpad(): Promise<ZebraInstallReport> {
+  const reached = await inTurn(() => reach(installZebra));
+  return reached.state === "ok" ? reached.reading : reached;
+}
+
 export async function findIpad(): Promise<IpadReport> {
   const connection = readConnection();
   if (connection.transport === "usb") {
@@ -127,6 +147,42 @@ export async function findIpad(): Promise<IpadReport> {
   return reached.state === "ok"
     ? { state: "ok", ipad: reached.reading, connection }
     : reached;
+}
+
+export function readOnboardingComplete(): boolean {
+  return readSetting(onboardingSetting) === "true";
+}
+
+export async function readIpadOnboarding(): Promise<IpadOnboarding> {
+  const connection = readConnection();
+  const privateKey = await readText(keyPath);
+  const port = await inTurn(() => probeIpadPort(sshPort, connection));
+  const reached =
+    port === "open"
+      ? await inTurn(() => reach(readDefaultPasswordAccounts, connection))
+      : null;
+  const authorizedKey =
+    privateKey === null
+      ? null
+      : (derivePublicKey(privateKey, clientName)?.trim() ?? null);
+  const signedIn = reached?.state === "ok";
+  const defaultPasswordAccounts =
+    reached?.state === "ok" ? reached.reading : [];
+  if (authorizedKey === null || signedIn || reached?.state === "signed-out") {
+    const complete =
+      authorizedKey !== null &&
+      signedIn &&
+      defaultPasswordAccounts.length === 0;
+    writeSetting(onboardingSetting, String(complete));
+  }
+  return {
+    connection,
+    sshPort: port,
+    authorizedKey,
+    signedIn,
+    defaultPasswordAccounts,
+    complete: readOnboardingComplete(),
+  };
 }
 
 export async function checkWifiAddress(address: string): Promise<WifiCheck> {

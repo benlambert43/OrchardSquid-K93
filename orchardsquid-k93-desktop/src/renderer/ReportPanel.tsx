@@ -10,7 +10,7 @@ export type Unreached =
 export type Check<Reading> = { state: "ok"; reading: Reading } | Unreached;
 
 export const signedOutExplanation =
-  "The iPad does not accept this computer's SSH key yet. The README explains how to add it.";
+  "The iPad does not accept this computer's SSH key yet. The Onboarding page shows how to add it.";
 
 const explanations: Record<
   Exclude<Unreached["state"], "unreachable">,

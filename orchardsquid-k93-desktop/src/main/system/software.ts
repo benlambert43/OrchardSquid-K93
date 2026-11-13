@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { IpadPackage, IpadSoftware } from "@/bridge.ts";
 import { runEach } from "@/main/ssh.ts";
 import { readDeveloperSetup } from "@/main/system/developerSetup.ts";
+import { userDefaultPackageIds } from "@/userDefault.ts";
 
 const packageFields = [
   "Package",
@@ -18,6 +19,7 @@ const packageFields = [
 const packageFormat = packageFields.map((field) => `\${${field}}`).join("\\t");
 const installedStatus = "install ok installed";
 const generatedTag = "role::cydia";
+const userDefaultPackages = new Set(userDefaultPackageIds);
 const kilobyte = 1024;
 
 function encode(file: string): string {
@@ -83,10 +85,11 @@ function parseEntry(line: string): Entry[] {
 export async function readSoftware(client: Client): Promise<IpadSoftware> {
   const outputs = await runEach(client, commands);
   const entries = outputs.packages.split("\n").flatMap(parseEntry);
-  const packages = entries
+  const installed = entries
     .filter(({ generated }) => !generated)
     .map(({ listing }) => listing);
-  const versions = new Map(packages.map(({ id, version }) => [id, version]));
+  const versions = new Map(installed.map(({ id, version }) => [id, version]));
+  const packages = installed.filter(({ id }) => !userDefaultPackages.has(id));
   const webkit = readBundle(outputs.webkit);
   const developerSetup = await readDeveloperSetup(client);
   return {
@@ -98,7 +101,8 @@ export async function readSoftware(client: Client): Promise<IpadSoftware> {
     safari: readBundle(outputs.safari)?.CFBundleShortVersionString ?? null,
     webkit: webkit && withoutSystemPrefix(webkit.CFBundleVersion),
     packages,
-    generatedPackages: entries.length - packages.length,
+    userDefaultPackages: installed.length - packages.length,
+    generatedPackages: entries.length - installed.length,
     developerSetup,
   };
 }

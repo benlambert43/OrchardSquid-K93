@@ -2,6 +2,7 @@ import { PanelNote } from "@orchardsquid-k93/ui";
 
 import type { IpadDeveloperSetup, IpadSoftware } from "@/bridge.ts";
 import { developerPackages, developerSources } from "@/developerSetup.ts";
+import { InstallZebra } from "@/renderer/dependencies/InstallZebra.tsx";
 import { type Step, type StepGroup, StepList } from "@/renderer/StepList.tsx";
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction" });
@@ -49,50 +50,26 @@ function sourceStep(
       };
 }
 
-function passwordStep(setup: IpadDeveloperSetup, account: string): Step {
-  const label = `Password for ${account}`;
-  return setup.defaultPasswordAccounts.includes(account)
-    ? {
-        label,
-        state: "todo",
-        detail: "Still the factory default.",
-        command: `passwd ${account}`,
-      }
-    : { label, state: "done", detail: "Changed from the factory default." };
-}
-
-function buildGroups(software: IpadSoftware): StepGroup[] {
+function buildGroups(
+  software: IpadSoftware,
+  onInstalled: () => Promise<unknown>,
+): StepGroup[] {
   const setup = software.developerSetup;
+  const zebra = packageStep(software, "Zebra", developerPackages.zebra);
   return [
     {
       title: "Package manager",
       steps: [
         sourceStep(setup, "Zebra repository", developerSources.zebra),
-        packageStep(software, "Zebra", developerPackages.zebra),
-        software.cydia
-          ? {
-              label: "Cydia kept",
-              state: "done",
-              detail: `Version ${software.cydia} is still installed.`,
-            }
-          : {
-              label: "Cydia kept",
-              state: "todo",
-              detail: "Cydia is missing, and the jailbreak depends on it.",
-            },
-      ],
-    },
-    {
-      title: "Command line over SSH",
-      steps: [
-        packageStep(software, "OpenSSH", "openssh"),
         {
-          label: "SSH sign-in",
-          state: "done",
-          detail: "This page was read over SSH as root.",
+          ...zebra,
+          action: (
+            <InstallZebra
+              installed={zebra.state === "done"}
+              onInstalled={onInstalled}
+            />
+          ),
         },
-        passwordStep(setup, "root"),
-        passwordStep(setup, "mobile"),
       ],
     },
   ];
@@ -100,12 +77,14 @@ function buildGroups(software: IpadSoftware): StepGroup[] {
 
 export function DeveloperDependencies({
   software,
+  onInstalled,
 }: {
   software: IpadSoftware;
+  onInstalled: () => Promise<unknown>;
 }) {
   return (
     <>
-      <StepList groups={buildGroups(software)} />
+      <StepList groups={buildGroups(software, onInstalled)} />
       <PanelNote>
         Run the commands in the Shell tab. Offered versions come from
         Cydia&apos;s catalogue, which is only as fresh as the last refresh in

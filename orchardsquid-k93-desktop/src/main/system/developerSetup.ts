@@ -4,7 +4,6 @@ import type { IpadDeveloperSetup, IpadOffer } from "@/bridge.ts";
 import { developerPackageIds } from "@/developerSetup.ts";
 import { runEach } from "@/main/ssh.ts";
 
-const factoryPasswordHash = "/smx7MYTQIi2M";
 const catalogueFolder = "/var/mobile/Library/Caches/com.saurik.Cydia/lists";
 const contextLines = 25;
 
@@ -14,7 +13,6 @@ const packagePattern = developerPackageIds
 
 const commands = {
   sources: "cat /etc/apt/sources.list.d/*.list",
-  defaultPasswordAccounts: `grep -E '^(root|mobile):${factoryPasswordHash}:' /etc/master.passwd | sed 's/:.*//'`,
   offers: `(cd ${catalogueFolder} && grep -A ${String(contextLines)} -x -E 'Package: (${packagePattern})' *_Packages)`,
 };
 
@@ -36,7 +34,7 @@ function parseSourceUrls(output: string): string[] {
   });
 }
 
-function newer(a: string, b: string): boolean {
+export function newer(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { numeric: true }) > 0;
 }
 
@@ -96,7 +94,6 @@ export async function readDeveloperSetup(
   const outputs = await runEach(client, commands);
   return {
     sources: parseSourceUrls(outputs.sources).map(withoutScheme),
-    defaultPasswordAccounts: lines(outputs.defaultPasswordAccounts),
     offers: parseOffers(outputs.offers),
   };
 }

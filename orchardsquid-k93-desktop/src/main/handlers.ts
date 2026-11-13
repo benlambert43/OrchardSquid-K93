@@ -21,9 +21,12 @@ import {
   checkWifiAddress,
   cleanUpIpad,
   findIpad,
+  installZebraOnIpad,
   readIpadBatteryHealth,
+  readIpadOnboarding,
   readIpadSoftware,
   readIpadSystem,
+  readOnboardingComplete,
 } from "@/main/system.ts";
 
 type Handlers = {
@@ -49,11 +52,14 @@ export const handlers: Handlers = {
   setWifiAddress: (address) =>
     checkWifiAddress(wifiAddressSchema.parse(address)),
   findIpad,
+  readOnboardingComplete,
+  readIpadOnboarding,
   readIpadSystem,
   readIpadBatteryHealth,
   readIpadSoftware,
   readLaptopToolchain,
   cleanUpIpad,
+  installZebraOnIpad,
   exportSshBackup,
   restoreSshBackup,
   openShell: (size) => {

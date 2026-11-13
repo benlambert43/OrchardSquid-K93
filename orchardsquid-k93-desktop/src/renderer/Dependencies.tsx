@@ -36,10 +36,15 @@ function loadChecks(transport?: Transport): Checks {
 export function Dependencies() {
   const [checks, setChecks] = useState(() => loadChecks());
   const [isRefreshing, startRefresh] = useTransition();
-  const refresh = (transport?: Transport) => {
+  const reload = (transport?: Transport): Checks => {
+    const next = loadChecks(transport);
     startRefresh(() => {
-      setChecks(loadChecks(transport));
+      setChecks(next);
     });
+    return next;
+  };
+  const refresh = (transport?: Transport) => {
+    reload(transport);
   };
   const check = checks.software;
 
@@ -66,7 +71,12 @@ export function Dependencies() {
     >
       <div className="grid max-w-3xl gap-6">
         <ReportPanel title="Developer Dependencies" check={check} explains>
-          {(software) => <DeveloperDependencies software={software} />}
+          {(software) => (
+            <DeveloperDependencies
+              software={software}
+              onInstalled={() => reload().software}
+            />
+          )}
         </ReportPanel>
         <ReportPanel title="Overview" check={check}>
           {(software) => <SoftwareDetails software={software} />}

@@ -176,6 +176,42 @@ export function runScript(
   });
 }
 
+export function quote(value: string): string {
+  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
+}
+
+export function upload(
+  client: Client,
+  file: string,
+  contents: Buffer,
+  timeoutMs: number,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      client.destroy();
+      reject(new Error("The copy to the iPad took too long"));
+    }, timeoutMs);
+    client.exec(`cat > ${quote(file)}`, (error, channel) => {
+      if (error) {
+        clearTimeout(timer);
+        reject(error);
+        return;
+      }
+      channel.resume();
+      channel.stderr.resume();
+      channel.on("close", (code: number | null) => {
+        clearTimeout(timer);
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`The copy to the iPad ended with ${String(code)}`));
+        }
+      });
+      channel.end(contents);
+    });
+  });
+}
+
 export async function run(client: Client, command: string): Promise<string> {
   return (await runForBytes(client, command)).toString();
 }

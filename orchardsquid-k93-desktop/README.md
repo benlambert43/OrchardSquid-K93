@@ -1,5 +1,26 @@
 Connecting to the iPad:
 
+The app's Onboarding page walks through these steps and checks each one against the iPad. The page is in the sidebar until every step is done, and linked from the Settings page after that. The steps start from User Default: the iPad reset to factory settings, jailbroken with Carbon, with the iocaste untether and OpenSSH installed from Cydia. A reset undoes steps 2 and 3, so they are repeated after every reset.
+
+1. Create this computer's key, once:
+
+```
+ssh-keygen -t ed25519 -N "" -C "OrchardSquid-K93" -f ~/.ssh/orchardsquid-k93
+```
+
+2. Add the key to the iPad. In the app, open the Shell page, which asks for the iPad's root password, and run the command that the Onboarding page shows under "Key added to the iPad". The password is not kept in this repository.
+
+3. Change the passwords of `root` and `mobile` from the factory default, on the Shell page:
+
+```
+passwd root
+passwd mobile
+```
+
+Without the key, the Shell page asks for the password each time, the Dashboard fills only its iPad and Status panels, and the Dependencies page stays empty.
+
+From a terminal instead of the app:
+
 ~/.ssh/config needs to allow a less secure HostKeyAlgorithm supported by the processor:
 
 ```
@@ -9,23 +30,18 @@ Connecting to the iPad:
    HostKeyAlgorithms +ssh-rsa
 ```
 
-You can then ssh into the iPad:
+A reset gives the iPad a new host key, and ssh refuses to connect while `~/.ssh/known_hosts` still has the old one. Remove it first:
 
 ```
-Connect:
+ssh-keygen -R 192.168.68.115
+```
+
+You can then add the key and ssh into the iPad. Both ask for the iPad's root password until the key is added:
+
+```
+ssh-copy-id -i ~/.ssh/orchardsquid-k93.pub Bens-iPad
 ssh Bens-iPad
 ```
-
-It asks for the iPad's root password, which is not kept in this repository.
-
-The desktop app does not use the password. It connects through the USB cable and signs in with a key of its own, which is created and added to the iPad once:
-
-```
-ssh-keygen -t ed25519 -N "" -C "OrchardSquid-K93" -f ~/.ssh/orchardsquid-k93
-ssh-copy-id -i ~/.ssh/orchardsquid-k93.pub Bens-iPad
-```
-
-Without the key, the Shell page asks for the password each time, the Dashboard fills only its iPad and Status panels, and the Dependencies page stays empty.
 
 On the Settings page, Export backup saves the key and these settings as a zip file, and Restore backup sets another computer up from that file instead of the password. By hand, the same restore is:
 

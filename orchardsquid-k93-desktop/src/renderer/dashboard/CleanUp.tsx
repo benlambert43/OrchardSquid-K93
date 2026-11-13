@@ -1,7 +1,7 @@
-import { Button, DetailNote } from "@orchardsquid-k93/ui";
 import { useActionState } from "react";
 
 import type { IpadCleanUpReport } from "@/bridge.ts";
+import { ConfirmButton } from "@/renderer/ConfirmButton.tsx";
 import { signedOutExplanation } from "@/renderer/ReportPanel.tsx";
 import { formatBytes } from "@/renderer/format.ts";
 import { UnreachableNote } from "@/renderer/UnreachableNote.tsx";
@@ -74,17 +74,17 @@ export function CleanUp({ onCleanedUp }: { onCleanedUp: () => void }) {
     <div className="pb-2.5">
       <dt className="sr-only">System volume clean-up</dt>
       <dd className="flex flex-col items-start gap-2">
-        <DetailNote>
+        <ConfirmButton
+          label={isBusy ? "Cleaning up…" : "Clean Up"}
+          title="Clean Up"
+          disabled={isBusy}
+          action={action}
+        >
           Moves the stock internet apps except Safari, and folders only
           command-line tools and SpringBoard read, to the data volume. Folders
           are replaced with links, and apps are kept in
           /private/var/stash/OrchardSquid. Anything already moved is skipped.
-        </DetailNote>
-        <form action={action}>
-          <Button type="submit" disabled={isBusy}>
-            {isBusy ? "Cleaning up…" : "Clean Up"}
-          </Button>
-        </form>
+        </ConfirmButton>
         <Result outcome={outcome} />
       </dd>
     </div>

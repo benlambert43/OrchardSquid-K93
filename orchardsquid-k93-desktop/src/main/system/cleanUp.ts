@@ -1,7 +1,7 @@
 import type { Client } from "ssh2";
 
 import type { IpadCleanUp } from "@/bridge.ts";
-import { runScript } from "@/main/ssh.ts";
+import { quote, runScript } from "@/main/ssh.ts";
 
 const stashFolder = "/private/var/stash/OrchardSquid";
 const scriptTimeoutMs = 10 * 60 * 1000;
@@ -32,10 +32,6 @@ const linkedFolders = [
   "/Library/Wallpaper",
   "/Library/Ringtones",
 ];
-
-function quote(value: string): string {
-  return `'${value.replaceAll("'", String.raw`'\''`)}'`;
-}
 
 const script = String.raw`
 B=${quote(stashFolder)}

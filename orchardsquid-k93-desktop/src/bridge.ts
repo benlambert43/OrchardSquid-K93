@@ -91,8 +91,18 @@ export interface IpadOffer {
 
 export interface IpadDeveloperSetup {
   sources: string[];
-  defaultPasswordAccounts: string[];
   offers: Partial<Record<string, IpadOffer[]>>;
+}
+
+export type IpadPort = "open" | "closed" | "absent";
+
+export interface IpadOnboarding {
+  connection: Connection;
+  sshPort: IpadPort;
+  authorizedKey: string | null;
+  signedIn: boolean;
+  defaultPasswordAccounts: string[];
+  complete: boolean;
 }
 
 export interface IpadSoftware {
@@ -104,6 +114,7 @@ export interface IpadSoftware {
   safari: string | null;
   webkit: string | null;
   packages: IpadPackage[];
+  userDefaultPackages: number;
   generatedPackages: number;
   developerSetup: IpadDeveloperSetup;
 }
@@ -151,6 +162,15 @@ export interface IpadCleanUp {
 export type IpadCleanUpReport =
   { state: "ok"; cleanUp: IpadCleanUp } | { state: "signed-out" } | Unreachable;
 
+export type ZebraInstall =
+  | { state: "installed"; version: string; homeScreenRefreshed: boolean }
+  | { state: "unavailable" }
+  | { state: "mismatch" }
+  | { state: "refused"; output: string };
+
+export type ZebraInstallReport =
+  ZebraInstall | { state: "signed-out" } | Unreachable;
+
 export type SshBackupResult =
   | { state: "saved"; path: string; ipadIncluded: boolean }
   | { state: "cancelled" }
@@ -183,11 +203,14 @@ export interface Requests {
   readWifiAddress: () => Promise<string | null>;
   setWifiAddress: (address: string) => Promise<WifiCheck>;
   findIpad: () => Promise<IpadReport>;
+  readOnboardingComplete: () => Promise<boolean>;
+  readIpadOnboarding: () => Promise<IpadOnboarding>;
   readIpadSystem: () => Promise<IpadSystemReport>;
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;
   readLaptopToolchain: () => Promise<LaptopToolchain>;
   cleanUpIpad: () => Promise<IpadCleanUpReport>;
+  installZebraOnIpad: () => Promise<ZebraInstallReport>;
   exportSshBackup: () => Promise<SshBackupResult>;
   restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;

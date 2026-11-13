@@ -16,13 +16,16 @@ export function readText(file: string): Promise<string | null> {
   return readFile(file, "utf8").catch(() => null);
 }
 
-export function derivePublicKey(privateKey: string): string | null {
+export function derivePublicKey(
+  privateKey: string,
+  comment?: string,
+): string | null {
   const parsed = utils.parseKey(privateKey);
   if (parsed instanceof Error) {
     return null;
   }
   const blob = parsed.getPublicSSH().toString("base64");
-  return `${parsed.type} ${blob} ${parsed.comment}\n`;
+  return `${parsed.type} ${blob} ${comment ?? parsed.comment}\n`;
 }
 
 function isHostSection(line: Line): line is Section {

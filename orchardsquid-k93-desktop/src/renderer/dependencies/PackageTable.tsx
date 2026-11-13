@@ -4,6 +4,7 @@ import type { IpadPackage, IpadSoftware } from "@/bridge.ts";
 import { formatBytes, formatNumber } from "@/renderer/format.ts";
 
 const firstSection = "Development";
+const listFormat = new Intl.ListFormat(undefined, { type: "conjunction" });
 
 function sectionName(section: string): string {
   return section ? section.replaceAll("_", " ") : "No section";
@@ -17,7 +18,39 @@ function groupBySection(packages: IpadPackage[]): [string, IpadPackage[]][] {
   );
 }
 
+function LeftOut({ software }: { software: IpadSoftware }) {
+  const { userDefaultPackages, generatedPackages } = software;
+  const leftOut: string[] = [];
+  if (userDefaultPackages > 0) {
+    leftOut.push(
+      `${formatNumber(userDefaultPackages)} ${
+        userDefaultPackages === 1 ? "package that is" : "packages that are"
+      } part of User Default`,
+    );
+  }
+  if (generatedPackages > 0) {
+    leftOut.push(
+      `${formatNumber(generatedPackages)} entries that Cydia generates to describe the iPad itself`,
+    );
+  }
+  return (
+    leftOut.length > 0 && (
+      <PanelNote>Left out: {listFormat.format(leftOut)}.</PanelNote>
+    )
+  );
+}
+
 export function PackageTable({ software }: { software: IpadSoftware }) {
+  if (software.packages.length === 0) {
+    return (
+      <>
+        <PanelNote>
+          Nothing has been installed on top of User Default yet.
+        </PanelNote>
+        <LeftOut software={software} />
+      </>
+    );
+  }
   return (
     <>
       <table className="w-full text-left">
@@ -73,12 +106,7 @@ export function PackageTable({ software }: { software: IpadSoftware }) {
           </tbody>
         ))}
       </table>
-      {software.generatedPackages > 0 && (
-        <PanelNote>
-          Left out: {formatNumber(software.generatedPackages)} entries that
-          Cydia generates to describe the iPad itself.
-        </PanelNote>
-      )}
+      <LeftOut software={software} />
     </>
   );
 }

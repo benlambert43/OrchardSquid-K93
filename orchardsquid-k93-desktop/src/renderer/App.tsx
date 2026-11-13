@@ -2,6 +2,7 @@ import {
   Cog6ToothIcon,
   CommandLineIcon,
   CubeIcon,
+  RocketLaunchIcon,
   Squares2X2Icon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
@@ -12,11 +13,14 @@ import { Dashboard } from "@/renderer/Dashboard.tsx";
 import { Dependencies } from "@/renderer/Dependencies.tsx";
 import { Development } from "@/renderer/Development.tsx";
 import { type PageName, pageLinks, usePage } from "@/renderer/navigation.ts";
+import { useOnboardingComplete } from "@/renderer/onboarding/completion.ts";
+import { Onboarding } from "@/renderer/Onboarding.tsx";
 import { Settings } from "@/renderer/Settings.tsx";
 import { Shell } from "@/renderer/Shell.tsx";
 
 const pages: Record<PageName, () => JSX.Element> = {
   dashboard: Dashboard,
+  onboarding: Onboarding,
   dependencies: Dependencies,
   development: Development,
   shell: Shell,
@@ -25,6 +29,7 @@ const pages: Record<PageName, () => JSX.Element> = {
 
 export function App() {
   const page = usePage();
+  const onboardingComplete = useOnboardingComplete();
   const CurrentPage = pages[page];
   return (
     <AppFrame
@@ -37,6 +42,16 @@ export function App() {
           icon: <Squares2X2Icon aria-hidden className="size-5" />,
           current: page === "dashboard",
         },
+        ...(onboardingComplete
+          ? []
+          : [
+              {
+                href: pageLinks.onboarding,
+                label: "Onboarding",
+                icon: <RocketLaunchIcon aria-hidden className="size-5" />,
+                current: page === "onboarding",
+              },
+            ]),
         {
           href: pageLinks.dependencies,
           label: "Dependencies",
@@ -59,7 +74,9 @@ export function App() {
           href: pageLinks.settings,
           label: "Settings",
           icon: <Cog6ToothIcon aria-hidden className="size-5" />,
-          current: page === "settings",
+          current:
+            page === "settings" ||
+            (page === "onboarding" && onboardingComplete),
         },
       ]}
     >
