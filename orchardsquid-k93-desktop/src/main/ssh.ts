@@ -19,6 +19,7 @@ const passwordAttempts = 3;
 const handshakeTimeoutMs = 10_000;
 const keepaliveIntervalMs = 15_000;
 const commandTimeoutMs = 10_000;
+const uploadChunkBytes = 64 * 1024;
 const recordSeparator = "\x1e";
 const recordSeparatorEscape = String.raw`\036`;
 
@@ -200,6 +201,7 @@ export function upload(
   file: string,
   contents: Buffer,
   timeoutMs: number,
+  onProgress?: (fraction: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -212,6 +214,19 @@ export function upload(
         reject(error);
         return;
       }
+      let sent = 0;
+      const send = () => {
+        while (sent < contents.length) {
+          const chunk = contents.subarray(sent, sent + uploadChunkBytes);
+          sent += chunk.length;
+          onProgress?.(sent / contents.length);
+          if (!channel.write(chunk)) {
+            channel.once("drain", send);
+            return;
+          }
+        }
+        channel.end();
+      };
       channel.resume();
       channel.stderr.resume();
       channel.on("close", (code: number | null) => {
@@ -222,7 +237,7 @@ export function upload(
           reject(new Error(`The copy to the iPad ended with ${String(code)}`));
         }
       });
-      channel.end(contents);
+      send();
     });
   });
 }

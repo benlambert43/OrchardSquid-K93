@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import SSHConfig, { type Directive, type Line, type Section } from "ssh-config";
@@ -11,6 +11,9 @@ export const sshDirectory = path.dirname(keyPath);
 export const publicKeyPath = `${keyPath}.pub`;
 export const knownHostsPath = path.join(sshDirectory, "known_hosts");
 export const configPath = path.join(sshDirectory, "config");
+
+const ownerOnly = 0o600;
+const ownerOnlyDirectory = 0o700;
 
 export function readText(file: string): Promise<string | null> {
   return readFile(file, "utf8").catch(() => null);
@@ -53,4 +56,29 @@ export function listConfigHosts(config: string): ConfigHost[] {
           : [],
       ),
     }));
+}
+
+export function lineBreakAfter(text: string): string {
+  return text === "" || text.endsWith("\n") ? "" : "\n";
+}
+
+export async function appendConfigHosts(
+  config: string,
+  hosts: ConfigHost[],
+): Promise<void> {
+  if (hosts.length === 0) {
+    return;
+  }
+  const blocks = hosts.map(({ host, options }) =>
+    [
+      `Host ${host}`,
+      ...options.map(({ name, value }) => `    ${name} ${value}`),
+    ].join("\n"),
+  );
+  await mkdir(sshDirectory, { recursive: true, mode: ownerOnlyDirectory });
+  await appendFile(
+    configPath,
+    `${config.trim() === "" ? "" : `${lineBreakAfter(config)}\n`}${blocks.join("\n\n")}\n`,
+    { mode: ownerOnly },
+  );
 }

@@ -7,11 +7,13 @@ import type {
   IpadAppsReport,
   IpadBatteryHealth,
   IpadCleanUpReport,
+  IpadDevelopmentReport,
   IpadOnboarding,
   IpadReport,
   IpadSoftwareReport,
   IpadSystem,
   IpadSystemReport,
+  PackageInstallReport,
   Unreachable,
   WifiCheck,
   ZebraInstallReport,
@@ -24,6 +26,10 @@ import {
   readConnection,
   rememberWifiAddress,
 } from "@/main/connection.ts";
+import {
+  type ReportProgress,
+  withProgress,
+} from "@/main/development/progress.ts";
 import { findIpadOverUsb } from "@/main/ipad.ts";
 import { readSetting, writeSetting } from "@/main/settings.ts";
 import {
@@ -39,6 +45,8 @@ import { readBatteryHealth } from "@/main/system/batteryHealth.ts";
 import { cleanUp } from "@/main/system/cleanUp.ts";
 import { readCpu } from "@/main/system/cpu.ts";
 import { readCrashReports } from "@/main/system/crashReports.ts";
+import { installDeb } from "@/main/system/deb.ts";
+import { readDevelopment } from "@/main/system/development.ts";
 import { readIdentity } from "@/main/system/identity.ts";
 import { readNetwork } from "@/main/system/network.ts";
 import { readDefaultPasswordAccounts } from "@/main/system/passwords.ts";
@@ -48,6 +56,7 @@ import { installZebra } from "@/main/system/zebra.ts";
 import { clientName } from "@/main/usbmux.ts";
 
 const onboardingSetting = "onboardingComplete";
+const packageFile = "/private/var/tmp/orchardsquid-k93-package.deb";
 
 type Reached<Reading> =
   { state: "ok"; reading: Reading } | { state: "signed-out" } | Unreachable;
@@ -159,6 +168,31 @@ export async function changeIpadApp(
 export async function installZebraOnIpad(): Promise<ZebraInstallReport> {
   const reached = await inTurn(() => reach(installZebra));
   return reached.state === "ok" ? reached.reading : reached;
+}
+
+export async function readIpadDevelopment(): Promise<IpadDevelopmentReport> {
+  const connection = readConnection();
+  const reached = await inTurn(() => reach(readDevelopment, connection));
+  return reached.state === "ok"
+    ? { state: "ok", development: { connection, ...reached.reading } }
+    : reached;
+}
+
+export async function installPackageOnIpad(
+  file: string,
+  contents: Buffer,
+  report: ReportProgress,
+): Promise<PackageInstallReport> {
+  const reached = await inTurn(() =>
+    reach((client) =>
+      withProgress("package", "copy", report, (announce) =>
+        installDeb(client, contents, packageFile, (step, fraction) => {
+          announce(step, file, fraction);
+        }),
+      ),
+    ),
+  );
+  return reached.state === "ok" ? { ...reached.reading, file } : reached;
 }
 
 export async function findIpad(): Promise<IpadReport> {

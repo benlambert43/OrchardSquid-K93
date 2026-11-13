@@ -1,9 +1,10 @@
 import { app } from "electron";
 import { z } from "zod";
 
-import type { Requests } from "@/bridge.ts";
+import type { DevelopmentProgress, Requests } from "@/bridge.ts";
 import { appActions } from "@/appActions.ts";
 import { cleanUpOptions } from "@/cleanUpSteps.ts";
+import { laptopInstallOptions, laptopTools } from "@/developmentSetup.ts";
 import { exportSshBackup, restoreSshBackup } from "@/main/backupDialogs.ts";
 import {
   chooseTransport,
@@ -13,6 +14,18 @@ import {
   wifiAddressSchema,
 } from "@/main/connection.ts";
 import { readLaptopToolchain } from "@/main/development.ts";
+import { installLaptopTool } from "@/main/development/install.ts";
+import { installIpadPackage } from "@/main/development/package.ts";
+import {
+  addSshHost,
+  readSshHost,
+  testSshHost,
+} from "@/main/development/sshHost.ts";
+import {
+  readUsbTunnel,
+  startUsbTunnel,
+  stopUsbTunnel,
+} from "@/main/development/tunnel.ts";
 import { send } from "@/main/events.ts";
 import {
   openShell,
@@ -28,6 +41,7 @@ import {
   installZebraOnIpad,
   readIpadApps,
   readIpadBatteryHealth,
+  readIpadDevelopment,
   readIpadOnboarding,
   readIpadSoftware,
   readIpadSystem,
@@ -53,6 +67,14 @@ const appIdSchema = z.string().min(1).max(255);
 
 const appActionSchema = z.enum(appActions);
 
+const laptopToolSchema = z.enum(laptopTools);
+
+const laptopInstallOptionsSchema = z.array(z.enum(laptopInstallOptions));
+
+function reportDevelopment(progress: DevelopmentProgress): void {
+  send("developmentProgress", progress);
+}
+
 export const handlers: Handlers = {
   getAppVersion: () => app.getVersion(),
   readConnection,
@@ -69,6 +91,20 @@ export const handlers: Handlers = {
   readIpadBatteryHealth,
   readIpadSoftware,
   readLaptopToolchain,
+  installLaptopTool: (tool, options) =>
+    installLaptopTool(
+      laptopToolSchema.parse(tool),
+      laptopInstallOptionsSchema.parse(options),
+      reportDevelopment,
+    ),
+  readUsbTunnel,
+  startUsbTunnel,
+  stopUsbTunnel,
+  readSshHost,
+  addSshHost,
+  testSshHost,
+  readIpadDevelopment,
+  installIpadPackage: () => installIpadPackage(reportDevelopment),
   cleanUpIpad: (options) =>
     cleanUpIpad(cleanUpOptionsSchema.parse(options), (progress) => {
       send("cleanUpProgress", progress);

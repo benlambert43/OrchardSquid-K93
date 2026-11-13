@@ -1,37 +1,17 @@
-import { useSyncExternalStore } from "react";
-
 import type { CleanUpProgress } from "@/bridge.ts";
+import { createProgressStore } from "@/renderer/progressStore.ts";
 
-const listeners = new Set<() => void>();
-let progress: CleanUpProgress | null = null;
+const store = createProgressStore<CleanUpProgress>((show) =>
+  window.bridge.onCleanUpProgress(show),
+);
 
-function show(next: CleanUpProgress | null): void {
-  progress = next;
-  for (const listener of listeners) {
-    listener();
-  }
-}
+export const useCleanUpProgress = store.useProgress;
 
-function subscribe(onChange: () => void): () => void {
-  listeners.add(onChange);
-  return () => {
-    listeners.delete(onChange);
-  };
-}
-
-export function useCleanUpProgress(): CleanUpProgress | null {
-  return useSyncExternalStore(subscribe, () => progress);
-}
-
-export async function followCleanUp<Result>(
+export function followCleanUp<Result>(
   run: () => Promise<Result>,
 ): Promise<Result> {
-  const stop = window.bridge.onCleanUpProgress(show);
-  show({ step: "survey", item: null, fraction: 0, seconds: 0 });
-  try {
-    return await run();
-  } finally {
-    stop();
-    show(null);
-  }
+  return store.follow(
+    { step: "survey", item: null, fraction: 0, seconds: 0 },
+    run,
+  );
 }

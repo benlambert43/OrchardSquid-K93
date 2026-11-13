@@ -44,6 +44,12 @@ export function formatDateTime(time: number): string {
   }).format(time);
 }
 
+export function formatDate(time: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+    new Date(time),
+  );
+}
+
 export function formatElapsed(seconds: number): string {
   return new Intl.DurationFormat(undefined, {
     style: "short",

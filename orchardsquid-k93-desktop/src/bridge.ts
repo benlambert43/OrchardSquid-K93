@@ -1,5 +1,11 @@
 import type { AppAction } from "@/appActions.ts";
 import type { CleanUpOption, CleanUpStep } from "@/cleanUpSteps.ts";
+import type {
+  DevelopmentStep,
+  DevelopmentTask,
+  LaptopInstallOption,
+  LaptopToolName,
+} from "@/developmentSetup.ts";
 
 export interface Ipad {
   name: string;
@@ -144,15 +150,132 @@ export type IpadSoftwareReport =
   | { state: "signed-out" }
   | Unreachable;
 
-export interface LaptopToolchain {
-  xcode: { folder: string; version: string | null } | null;
-  armv7Linker: boolean;
-  homebrew: string | null;
-  ldid: string | null;
-  iproxy: string | null;
-  theos: { folder: string; installed: boolean };
-  sdk: boolean;
+export interface LaptopTool {
+  file: string;
+  version: string | null;
 }
+
+export interface XcodeTool {
+  folder: string;
+  full: boolean;
+  version: string | null;
+  build: string | null;
+  compiler: string | null;
+  linker: string | null;
+  armv7: boolean;
+}
+
+export interface ShellSetting {
+  file: string | null;
+  value: string | null;
+}
+
+export interface TheosTool {
+  folder: string;
+  state: "installed" | "absent" | "occupied";
+  version: string | null;
+  commit: string | null;
+  committedAt: string | null;
+  branch: string | null;
+  source: string | null;
+  sdks: string[];
+  shell: ShellSetting;
+}
+
+export interface SdkTool {
+  folder: string;
+  version: string | null;
+  architectures: string[];
+}
+
+export interface LaptopToolchain {
+  xcode: XcodeTool | null;
+  homebrew: LaptopTool | null;
+  theos: TheosTool;
+  sdk: SdkTool | null;
+  ldid: LaptopTool | null;
+  xz: LaptopTool | null;
+}
+
+export type LaptopInstall =
+  | { state: "installed" }
+  | { state: "busy" }
+  | { state: "occupied" }
+  | { state: "unavailable" }
+  | { state: "mismatch" }
+  | { state: "failed"; output: string };
+
+export interface DevelopmentProgress {
+  task: DevelopmentTask;
+  step: DevelopmentStep;
+  item: string | null;
+  fraction: number | null;
+  seconds: number;
+}
+
+export interface UsbTunnel {
+  running: boolean;
+  port: number;
+  attached: boolean;
+}
+
+export type UsbTunnelStart =
+  { state: "started" } | { state: "port-in-use" } | Unreachable;
+
+export interface SshHostOption {
+  name: string;
+  value: string;
+}
+
+export interface SshHost {
+  name: string;
+  file: string;
+  options: SshHostOption[] | null;
+  pointsAtTunnel: boolean;
+}
+
+export type SshHostTest =
+  | { state: "connected"; machine: string }
+  | { state: "host-key-changed"; knownHost: string }
+  | { state: "failed"; output: string };
+
+export interface IpadSshServer {
+  version: string | null;
+  port: number | null;
+  passwordSignIn: boolean | null;
+  authorizedKeys: number;
+}
+
+export interface IpadPackageTool {
+  version: string | null;
+  architecture: string | null;
+}
+
+export interface IpadDevelopment {
+  connection: Connection;
+  openssh: IpadSshServer;
+  dpkg: IpadPackageTool;
+}
+
+export type IpadDevelopmentReport =
+  | { state: "ok"; development: IpadDevelopment }
+  | { state: "signed-out" }
+  | Unreachable;
+
+export type PackageInstall =
+  | {
+      state: "installed";
+      file: string;
+      package: string | null;
+      version: string | null;
+      homeScreenRefreshed: boolean;
+    }
+  | { state: "cancelled" }
+  | { state: "invalid"; file: string }
+  | { state: "refused"; file: string; output: string };
+
+export type PackageInstallReport =
+  PackageInstall | { state: "signed-out" } | Unreachable;
 
 export interface IpadCleanUp {
   moved: string[];
@@ -249,6 +372,18 @@ export interface Requests {
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;
   readLaptopToolchain: () => Promise<LaptopToolchain>;
+  installLaptopTool: (
+    tool: LaptopToolName,
+    options: LaptopInstallOption[],
+  ) => Promise<LaptopInstall>;
+  readUsbTunnel: () => Promise<UsbTunnel>;
+  startUsbTunnel: () => Promise<UsbTunnelStart>;
+  stopUsbTunnel: () => Promise<void>;
+  readSshHost: () => Promise<SshHost>;
+  addSshHost: () => Promise<SshHost>;
+  testSshHost: () => Promise<SshHostTest>;
+  readIpadDevelopment: () => Promise<IpadDevelopmentReport>;
+  installIpadPackage: () => Promise<PackageInstallReport>;
   cleanUpIpad: (options: CleanUpOption[]) => Promise<IpadCleanUpReport>;
   installZebraOnIpad: () => Promise<ZebraInstallReport>;
   readIpadApps: () => Promise<IpadAppsReport>;
@@ -269,6 +404,7 @@ export interface Events {
   shellReplay: Uint8Array;
   shellOutput: Uint8Array;
   cleanUpProgress: CleanUpProgress;
+  developmentProgress: DevelopmentProgress;
 }
 
 export type Subscriptions = {

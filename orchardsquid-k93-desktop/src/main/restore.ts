@@ -11,9 +11,11 @@ import {
 } from "@/main/backupFormat.ts";
 import { keyPath } from "@/main/ssh.ts";
 import {
+  appendConfigHosts,
   configPath,
   derivePublicKey,
   knownHostsPath,
+  lineBreakAfter,
   listConfigHosts,
   publicKeyPath,
   readText,
@@ -113,10 +115,6 @@ function choosePublicKey(privateKey: string, publicKey: string | null): string {
     : derived;
 }
 
-function lineBreakAfter(text: string): string {
-  return text === "" || text.endsWith("\n") ? "" : "\n";
-}
-
 function shortenHome(file: string): string {
   return file.replace(os.homedir(), "~");
 }
@@ -191,19 +189,7 @@ export async function applySshBackup(
       { mode: ownerOnly },
     );
   }
-  if (newConfigHosts.length > 0) {
-    const blocks = newConfigHosts.map(({ host, options }) =>
-      [
-        `Host ${host}`,
-        ...options.map(({ name, value }) => `    ${name} ${value}`),
-      ].join("\n"),
-    );
-    await appendFile(
-      configPath,
-      `${config.trim() === "" ? "" : `${lineBreakAfter(config)}\n`}${blocks.join("\n\n")}\n`,
-      { mode: ownerOnly },
-    );
-  }
+  await appendConfigHosts(config, newConfigHosts);
 
   return {
     previousKey: previousKey && shortenHome(previousKey),

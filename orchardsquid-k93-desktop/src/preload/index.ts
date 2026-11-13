@@ -32,6 +32,15 @@ const bridge: Bridge = {
   readIpadBatteryHealth: invoke("readIpadBatteryHealth"),
   readIpadSoftware: invoke("readIpadSoftware"),
   readLaptopToolchain: invoke("readLaptopToolchain"),
+  installLaptopTool: invoke("installLaptopTool"),
+  readUsbTunnel: invoke("readUsbTunnel"),
+  startUsbTunnel: invoke("startUsbTunnel"),
+  stopUsbTunnel: invoke("stopUsbTunnel"),
+  readSshHost: invoke("readSshHost"),
+  addSshHost: invoke("addSshHost"),
+  testSshHost: invoke("testSshHost"),
+  readIpadDevelopment: invoke("readIpadDevelopment"),
+  installIpadPackage: invoke("installIpadPackage"),
   cleanUpIpad: invoke("cleanUpIpad"),
   installZebraOnIpad: invoke("installZebraOnIpad"),
   readIpadApps: invoke("readIpadApps"),
@@ -46,6 +55,7 @@ const bridge: Bridge = {
   onShellReplay: subscribe("shellReplay"),
   onShellOutput: subscribe("shellOutput"),
   onCleanUpProgress: subscribe("cleanUpProgress"),
+  onDevelopmentProgress: subscribe("developmentProgress"),
 };
 
 contextBridge.exposeInMainWorld("bridge", bridge);

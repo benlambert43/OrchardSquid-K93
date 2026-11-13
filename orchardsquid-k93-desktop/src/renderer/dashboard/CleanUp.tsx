@@ -1,7 +1,7 @@
 import { DetailNote } from "@orchardsquid-k93/ui";
 import { useActionState, useId } from "react";
 
-import type { CleanUpProgress, IpadCleanUpReport } from "@/bridge.ts";
+import type { IpadCleanUpReport } from "@/bridge.ts";
 import {
   type CleanUpOption,
   type CleanUpStep,
@@ -13,11 +13,8 @@ import {
   useCleanUpProgress,
 } from "@/renderer/dashboard/cleanUpProgress.ts";
 import { signedOutExplanation } from "@/renderer/ReportPanel.tsx";
-import {
-  formatBytes,
-  formatElapsed,
-  formatPercent,
-} from "@/renderer/format.ts";
+import { formatBytes } from "@/renderer/format.ts";
+import { TaskProgress } from "@/renderer/TaskProgress.tsx";
 import { UnreachableNote } from "@/renderer/UnreachableNote.tsx";
 
 type Outcome = IpadCleanUpReport | { state: "failed" } | null;
@@ -133,39 +130,6 @@ function Options() {
   );
 }
 
-function Progress({ progress }: { progress: CleanUpProgress }) {
-  const percent = Math.round(progress.fraction * 100);
-  return (
-    <div className="flex flex-col gap-1.5 self-stretch">
-      <div
-        role="progressbar"
-        aria-label="Clean-up progress"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="h-1.5 overflow-hidden rounded-full bg-zinc-200
-          dark:bg-zinc-800"
-      >
-        <div
-          className="h-full rounded-full bg-emerald-500"
-          style={{ width: `${String(percent)}%` }}
-        />
-      </div>
-      <p className="text-zinc-600 dark:text-zinc-400">
-        {stepLabels[progress.step]}
-        {progress.item && (
-          <span className="block font-mono text-xs wrap-anywhere">
-            {progress.item}
-          </span>
-        )}
-      </p>
-      <p className="text-xs text-zinc-600 dark:text-zinc-400">
-        {formatPercent(progress.fraction)} · {formatElapsed(progress.seconds)}
-      </p>
-    </div>
-  );
-}
-
 export function CleanUp({ onCleanedUp }: { onCleanedUp: () => void }) {
   const [outcome, action, isBusy] = useActionState(
     async (_previous: Outcome, formData: FormData): Promise<Outcome> => {
@@ -209,7 +173,13 @@ export function CleanUp({ onCleanedUp }: { onCleanedUp: () => void }) {
           ramdisk that installs iOS updates. Anything already moved is skipped.
         </ConfirmButton>
         {progress ? (
-          <Progress progress={progress} />
+          <TaskProgress
+            label="Clean-up progress"
+            step={stepLabels[progress.step]}
+            item={progress.item}
+            fraction={progress.fraction}
+            seconds={progress.seconds}
+          />
         ) : (
           <Result outcome={outcome} />
         )}

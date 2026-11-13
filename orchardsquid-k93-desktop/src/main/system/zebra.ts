@@ -5,28 +5,13 @@ import { z } from "zod";
 
 import type { ZebraInstall } from "@/bridge.ts";
 import { developerPackages, developerSources } from "@/developerSetup.ts";
-import { quote, run, runScript, upload } from "@/main/ssh.ts";
+import { run } from "@/main/ssh.ts";
+import { installDeb } from "@/main/system/deb.ts";
 import { newer } from "@/main/system/developerSetup.ts";
 
 const repository = developerSources.zebra.url;
 const packageFile = "/private/var/tmp/xyz.willy.zebra.deb";
 const downloadTimeoutMs = 2 * 60 * 1000;
-const copyTimeoutMs = 2 * 60 * 1000;
-const installTimeoutMs = 5 * 60 * 1000;
-const reportedLines = 12;
-const statusLabel = "dpkg-status";
-const homeScreenFailure = "uicache-failed";
-
-const script = String.raw`
-f=${quote(packageFile)}
-dpkg -i "$f" </dev/null 2>&1
-status=$?
-rm -f "$f"
-if [ "$status" = 0 ]; then
-  (cd / && su mobile -c uicache) </dev/null >/dev/null 2>&1 || echo ${homeScreenFailure}
-fi
-echo "${statusLabel} $status"
-`;
 
 const listingSchema = z.object({
   Version: z.string().min(1),
@@ -90,19 +75,6 @@ function matches(file: Buffer, { Size, SHA256 }: Listing): boolean {
   );
 }
 
-function describeFailure(output: string): string {
-  return output
-    .split("\n")
-    .filter(
-      (line) =>
-        line.trim() &&
-        !line.startsWith(statusLabel) &&
-        line !== homeScreenFailure,
-    )
-    .slice(-reportedLines)
-    .join("\n");
-}
-
 export async function installZebra(client: Client): Promise<ZebraInstall> {
   const architecture = (await run(client, "dpkg --print-architecture")).trim();
   const index = await download(new URL("Packages", repository));
@@ -119,14 +91,13 @@ export async function installZebra(client: Client): Promise<ZebraInstall> {
   if (!matches(file, listing)) {
     return { state: "mismatch" };
   }
-  await upload(client, packageFile, file, copyTimeoutMs);
-  const output = await runScript(client, script, installTimeoutMs);
-  if (!output.split("\n").includes(`${statusLabel} 0`)) {
-    return { state: "refused", output: describeFailure(output) };
+  const installed = await installDeb(client, file, packageFile);
+  if (installed.state === "refused") {
+    return installed;
   }
   return {
     state: "installed",
     version: listing.Version,
-    homeScreenRefreshed: !output.split("\n").includes(homeScreenFailure),
+    homeScreenRefreshed: installed.homeScreenRefreshed,
   };
 }
