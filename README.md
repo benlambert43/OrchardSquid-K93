@@ -31,12 +31,11 @@ A `.env` beside each `.env.template` was written with local defaults when the pr
 for file in .env.template */.env.template; do cp "$file" "${file%.template}"; done
 ```
 
-| File                            | Variables                                                                                                                                             |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.env`                          | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `POSTGRES_PORT`, the port PostgreSQL listens on from your machine. Docker Compose reads them |
-| `orchardsquid-k93-server/.env`  | The same four, which must match the root file, and `POSTGRES_HOST`, `API_PORT`, and `BASE_FRONTEND_URL`, the web app's address                        |
-| `orchardsquid-k93-web/.env`     | `API_BASE_URL`, where the web app finds the API, and `SITE_URL`, the web app's public address                                                         |
-| `orchardsquid-k93-desktop/.env` | `VITE_API_BASE_URL`, where the desktop app finds the API                                                                                              |
+| File                           | Variables                                                                                                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.env`                         | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `POSTGRES_PORT`, the port PostgreSQL listens on from your machine. Docker Compose reads them |
+| `orchardsquid-k93-server/.env` | The same four, which must match the root file, and `POSTGRES_HOST`, `API_PORT`, and `BASE_FRONTEND_URL`, the web app's address                        |
+| `orchardsquid-k93-web/.env`    | `API_BASE_URL`, where the web app finds the API, and `SITE_URL`, the web app's public address                                                         |
 
 Git ignores every `.env*` file except the templates.
 
@@ -169,12 +168,12 @@ The status list is the path from the API to the components that every new featur
 `orchardsquid-k93-ui` holds the components that look and behave the same wherever they are shown. An app only decides what data they get and what happens when they are used.
 
 - **Props only.** Components take their data and their actions as props. They never fetch, read the environment, or import a framework, and ESLint refuses `next` and `node:` imports in the package.
-- **Logic sits beside the schemas.** In `orchardsquid-k93-shared`, logic that both apps need, such as parsing a form and calling the API, returns failures as values, and `createApiClient` builds the client that each app gives its API address. The package runs in Node.js and in browser windows alike, so ESLint refuses browser-only globals there.
+- **Logic sits beside the schemas.** `orchardsquid-k93-shared` holds what the web app and the API both need: the schemas, and `createApiClient`, which builds the client that the web app gives the API's address. The package runs in Node.js and in browser windows alike, so ESLint refuses browser-only globals there.
 - **The web app supplies data from the server.** `app/_components/StatusChecks.tsx` loads the API's health in a server component and hands it to the shared components. Changes from a form go through server actions, which refresh the page afterwards.
-- **The desktop app supplies data from the window.** `orchardsquid-k93-desktop/src/renderer/Dashboard.tsx` calls the API directly, and asks the main process over the bridge for what only it can reach, such as the iPad.
+- **The desktop app supplies data from its main process.** `orchardsquid-k93-desktop/src/renderer/Dashboard.tsx` asks it over the bridge for what the iPad reports. The desktop app does not call the API.
 - **`"use client"` where needed.** Components with state or event handlers start with it, which lets the App Router render them from server components. The others have no directive, so they can render on the server as well.
 - **One theme.** `src/theme.css` is the one place for colors and fonts, and it tells Tailwind to scan the package for class names. Each app's `globals.css` imports it after `tailwindcss` and provides the fonts behind `--font-geist-sans` and `--font-geist-mono` in its own way.
-- **No build step.** The apps compile the package from source, as they do `@orchardsquid-k93/shared`, so an edit hot-reloads in every app that is running.
+- **No build step.** The apps compile the package from source, as the web app does `@orchardsquid-k93/shared`, so an edit hot-reloads in every app that is running.
 - **Linted like the web app.** The web app gets its React and accessibility rules from `eslint-config-next`. React code outside it is held to the React, hooks, and accessibility rule sets of the same plugins, and may not use Node.js globals.
 - **Tests beside the components.** They run in jsdom with Testing Library; `npm run test:ui` runs them alone.
 
@@ -221,18 +220,16 @@ SITE_URL=https://example.com npm run build
 
 ## Desktop app
 
-`orchardsquid-k93-desktop` is an Electron app for looking after the iPad. It has three pages: the Dashboard, which shows what the iPad reports about itself, the Shell, a terminal on the iPad, and Settings, which backs up and restores the SSH key. All three are built from the shared components. Its window is a React app compiled by Vite that calls the API directly: the server that sits between the web app and the API is there for caching and search engines, which a desktop app has no use for. The main process owns the window, its security rules, and every connection to the iPad, and talks to the window over a small typed bridge.
+`orchardsquid-k93-desktop` is an Electron app for looking after the iPad. It has three pages: the Dashboard, which shows what the iPad reports about itself, the Shell, a terminal on the iPad, and Settings, which backs up and restores the SSH key. All three are built from the shared components. Its window is a React app compiled by Vite. The app uses neither the API nor its database: everything the window shows comes from the iPad by way of the main process, which owns the window, its security rules, and every connection to the iPad, and talks to the window over a small typed bridge. If the app comes to need data of its own, it is to keep it in SQLite on this computer.
 
 ```text
-window (React, sandboxed) → API
-window ⇄ window.bridge ⇄ preload script ⇄ IPC ⇄ main process
+window (React, sandboxed) ⇄ window.bridge ⇄ preload script ⇄ IPC ⇄ main process
 main process → usbmuxd → USB → iPad
 ```
 
 ### Commands
 
 ```sh
-npm run dev:server      # the Dashboard's API and Database rows need it
 npm run dev:desktop     # starts the app; press r in this terminal to restart the main process
 npm run test:desktop    # runs its tests alone
 npm run build:desktop   # packages an unsigned app for this machine
@@ -244,7 +241,6 @@ npm run make:desktop    # packages it and zips it
 ```sh
 npm run dev --workspace orchardsquid-k93-desktop -- --inspect-electron   # main process under a debugger
 npm run make --workspace orchardsquid-k93-desktop -- --arch x64          # another architecture
-VITE_API_BASE_URL=https://api.example.com npm run make:desktop   # a release that calls the production API
 ```
 
 ### Files
@@ -259,8 +255,6 @@ Paths are inside `orchardsquid-k93-desktop`.
 | `src/renderer/Settings.tsx`  | The Settings page, which holds the SSH backup panel                                                                                                                                          |
 | `src/renderer/SshBackup.tsx` | The SSH backup panel, with the Export backup and Restore backup buttons                                                                                                                      |
 | `src/renderer/format.ts`     | Writes sizes and durations the way the Dashboard shows them                                                                                                                                  |
-| `src/renderer/api.ts`        | The shared API client, pointed at `VITE_API_BASE_URL`                                                                                                                                        |
-| `src/env.ts`                 | The environment, parsed with Zod when the app starts                                                                                                                                         |
 | `src/bridge.ts`              | The `Bridge` type: `Requests` lists every call the window can make to the main process, and `Events` everything the main process sends to the window; the files below are typed against both |
 | `src/preload/index.ts`       | Exposes one function per request and one `on…` subscription per event as `window.bridge`, and nothing else                                                                                   |
 | `src/main/handlers.ts`       | Implements each request, and checks its arguments with Zod first                                                                                                                             |
@@ -318,19 +312,18 @@ Everything in the zip file is JSON, and `src/main/backupFormat.ts` holds the sch
 - **Nothing is overwritten.** A different key already at `~/.ssh/orchardsquid-k93` is replaced only after a confirmation, and is kept beside the new one under a name that ends in `.replaced-` and the time. Lines and `Host` blocks are only added to `known_hosts` and `config`, and a `Host` whose name `config` already has is left as it is.
 - **Some `Host` blocks are left out.** A block is restored only if its names have no wildcards and every option in it is on the list in `src/main/restore.ts`, which has none that runs a command or sends the connection somewhere else, such as `ProxyCommand` and `ProxyJump`. The Settings page names the blocks it left out.
 - **By hand**, the same restore is a few commands, which `orchardsquid-k93-desktop/README.md` lists.
+- **Git ignores zip files**, so that a backup saved inside the repository is not committed by accident.
 
 ### Configuration
 
-- **`VITE_API_BASE_URL`** in `orchardsquid-k93-desktop/.env` is compiled into the app. A release build needs the production address in the environment or in `.env.production`, and packaging fails without a valid one. CI packages with a local address, only to prove that the app builds.
-- **`EXTRA_ALLOWED_ORIGINS`** in `orchardsquid-k93-server/.env` lists where the window is served from, because the API answers only the origins it knows: `http://localhost:5173` for the dev server and `app://renderer` for the packaged app. The server reduces each entry to the origin a browser sends, so a trailing slash or capital letters do no harm.
+- **No environment.** The app reads no `.env` file and no environment variable, so there is nothing to set before it is started or packaged.
 - **Shipping.** `npm run build:desktop` produces an unsigned app with the default icon. Signing, notarization, installers, an icon, a bundle identifier of your own, and updates are all [Electron Forge](https://www.electronforge.io) configuration, to add in `forge.config.ts` when the app ships.
 
 ### Development
 
 - **Forge and Vite.** Electron Forge runs development, packaging, and distribution, and its Vite plugin bundles from `vite.main.config.ts`, `vite.preload.config.ts`, and `vite.renderer.config.ts`. Forge emits the first two as CommonJS, because a sandboxed preload script cannot load ES modules.
-- **Reloading.** The window hot-reloads, including after an edit to `orchardsquid-k93-shared` or `orchardsquid-k93-ui`, and a change to the preload script reloads it. Edits to those two packages reach the window because `vite.renderer.config.ts` sets `resolve.preserveSymlinks` to `false`: Forge's Vite plugin turns it on, and Vite then takes both packages for dependencies in `node_modules`, bundles them once, and stops looking at their sources. A change to the main process is rebuilt at once but takes effect when the app restarts: press `r` in the terminal that runs `npm run dev:desktop`, or type `rs` and Enter where that terminal is not interactive. Forge's `hotRestart` option is meant to do this by itself but does not restart the app as of Forge 8.0.1; turn it on in `forge.config.ts` once it does.
+- **Reloading.** The window hot-reloads, including after an edit to `orchardsquid-k93-ui`, and a change to the preload script reloads it. Edits to that package reach the window because `vite.renderer.config.ts` sets `resolve.preserveSymlinks` to `false`: Forge's Vite plugin turns it on, and Vite then takes the package for a dependency in `node_modules`, bundles it once, and stops looking at its sources. A change to the main process is rebuilt at once but takes effect when the app restarts: press `r` in the terminal that runs `npm run dev:desktop`, or type `rs` and Enter where that terminal is not interactive. Forge's `hotRestart` option is meant to do this by itself but does not restart the app as of Forge 8.0.1; turn it on in `forge.config.ts` once it does.
 - **No native add-ons.** ssh2 can use two optional ones, its own and `cpu-features`, and runs without either. Neither is built: their install scripts are denied in `allowScripts`, `forge.config.ts` tells Forge not to rebuild `cpu-features` for Electron, and `vite.main.config.ts` leaves it out of the bundle, where ssh2's attempt to load it fails quietly.
-- **Port 5173.** The dev server is fixed to it, because that address is on the API's list.
 - **Imports** inside the app start from `src` with `@/`, as they start from the app folder in the web app. Stack traces from the main process point at the TypeScript source.
 - **One copy runs.** A second launch brings the first one's window forward. The app started by `npm run dev:desktop` keeps its own data folder, with `(development)` after the name, so it runs beside an installed copy.
 - **Fast startup.** Each process loads one bundled file, compiled for the Chromium and Node.js that Electron ships rather than for older browsers. Geist is bundled instead of fetched, `app://` is registered so that V8 keeps the window's compiled script from the first launch on, and the window opens at once in the page's background color.
@@ -343,9 +336,8 @@ Everything in the zip file is JSON, and `src/main/backupFormat.ts` holds the sch
 - **The window has no access to Node.js or Electron.** Every renderer is sandboxed and context-isolated, and the preload script exposes named functions instead of `ipcRenderer`. The main process accepts calls only from the app's own page.
 - **Lint and types draw the same line.** ESLint keeps `electron`, `node:` modules, Node.js globals, and the main process's own files out of `src/renderer`. `src/renderer/tsconfig.json` checks the window's code without the Node.js types, and `tsconfig.json` checks everything else without the DOM types.
 - **A packaged app loads its window from `app://renderer`**, a protocol the main process serves from the app's own files, since `file://` pages have no origin to build rules on.
-- **Content-Security-Policy.** The page may load its own files, connect to the API's address, and show `data:` images, with no plugins, `<base>` element, or form posts. Inline scripts are allowed only for Vite's dev server. Inline styles are allowed everywhere, because xterm.js writes `<style>` elements and `style` attributes as it draws the terminal, and the Shell page is unreadable without them. `src/contentSecurityPolicy.ts` builds the policy, Vite's dev server sends it in development, and the `app://` handler sends it with every file of a packaged app.
+- **Content-Security-Policy.** The page may load its own files and show `data:` images, and may connect to nothing but the address it was loaded from, with no plugins, `<base>` element, or form posts. Inline scripts are allowed only for Vite's dev server. Inline styles are allowed everywhere, because xterm.js writes `<style>` elements and `style` attributes as it draws the terminal, and the Shell page is unreadable without them. `src/contentSecurityPolicy.ts` builds the policy, Vite's dev server sends it in development, and the `app://` handler sends it with every file of a packaged app.
 - **The shell is `root` on the iPad.** Whatever runs in the window can type into it, which is one more reason the window loads nothing but the app's own files. The main process checks the shape of every argument the window sends before it acts on it.
 - **Navigation.** Leaving the app and opening new windows are refused, and `https` addresses, whether from a link or `window.open`, open in the default browser.
 - **Permissions** are refused, both when the page asks for one and when Chromium only checks it, except writing to the clipboard and going fullscreen. Add to `grantedPermissions` in `src/main/index.ts` as the app needs more.
-- **Zod without `eval`.** `src/renderer/zod.ts` runs first and switches Zod to interpreting its schemas, because the compiled parsers it prefers need `eval`, which the policy forbids. The main process has no such policy and keeps the compiled parsers.
 - **Fuses.** The fuses in `forge.config.ts` are flipped when the app is packaged. They stop the binary from running as plain Node.js or taking debugger and `NODE_OPTIONS` flags, and make it load code only from `app.asar`. On macOS and Windows it also verifies that archive before loading it; Electron has no such check on Linux.

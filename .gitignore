@@ -3,6 +3,7 @@
 node_modules
 .DS_Store
 *.pem
+*.zip
 
 orchardsquid-k93-web/.next/
 orchardsquid-k93-desktop/.vite/

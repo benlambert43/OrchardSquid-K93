@@ -9,11 +9,7 @@ import { serverEnv } from "./serverEnv.ts";
 const app = express();
 
 app.disable("x-powered-by");
-app.use(
-  cors({
-    origin: [serverEnv.BASE_FRONTEND_URL, ...serverEnv.EXTRA_ALLOWED_ORIGINS],
-  }),
-);
+app.use(cors({ origin: [serverEnv.BASE_FRONTEND_URL] }));
 app.use(express.json());
 
 app.get("/api/v1/health", async (_req, res) => {

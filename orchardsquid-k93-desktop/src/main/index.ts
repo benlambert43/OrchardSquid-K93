@@ -13,11 +13,10 @@ import {
 } from "electron";
 
 import { contentSecurityPolicy } from "@/contentSecurityPolicy.ts";
-import { env } from "@/env.ts";
 import { handlers } from "@/main/handlers.ts";
 
 // Security model. The window is treated as untrusted: it shows data from the
-// API, so everything it can reach is decided here and nothing is left to the
+// iPad, so everything it can reach is decided here and nothing is left to the
 // page. Each rule below closes one way out of that; change them together.
 //
 // - Sandbox: app.enableSandbox() sandboxes every renderer, and context
@@ -28,13 +27,13 @@ import { handlers } from "@/main/handlers.ts";
 //   (isRenderer) before it runs, so an embedded or navigated-to page cannot
 //   call the main process.
 // - Origin: a packaged app is served from app://renderer, a privileged
-//   standard scheme, because file:// pages have no origin for the API's CORS
-//   list or the Content-Security-Policy to refer to. serveRendererFile only
+//   standard scheme, because file:// pages have no origin for the
+//   Content-Security-Policy to refer to. serveRendererFile only
 //   answers for that host and only with files inside the renderer folder; the
 //   startsWith check is what stops ../ paths from reading the rest of the disk.
 // - Content-Security-Policy: sent with every file by serveRendererFile, and by
-//   Vite's dev server in development. It limits the page to its own files and
-//   the API's origin, with no inline or evaluated script in a packaged app
+//   Vite's dev server in development. It limits the page to its own files,
+//   with no inline or evaluated script in a packaged app
 //   (src/contentSecurityPolicy.ts).
 // - Navigation: will-navigate and the window-open handler keep the window on
 //   the app's own page. Anything else is refused, and only https addresses are
@@ -57,9 +56,7 @@ const rendererFiles = path.join(
   MAIN_WINDOW_VITE_NAME,
 );
 
-const policy = contentSecurityPolicy(env.VITE_API_BASE_URL, {
-  devServer: false,
-});
+const policy = contentSecurityPolicy({ devServer: false });
 
 const grantedPermissions = new Set(["clipboard-sanitized-write", "fullscreen"]);
 

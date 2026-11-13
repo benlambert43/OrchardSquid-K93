@@ -1,4 +1,3 @@
-import type { HealthResponse } from "@orchardsquid-k93/shared";
 import {
   Button,
   Detail,
@@ -12,7 +11,6 @@ import {
 import { Suspense, use, useState, useTransition } from "react";
 
 import type { Ipad, IpadSystemReport, Usage } from "@/bridge.ts";
-import { api } from "@/renderer/api.ts";
 import { formatBytes, formatDuration } from "@/renderer/format.ts";
 
 type IpadCheck =
@@ -26,7 +24,6 @@ interface Checks {
   version: Promise<string | null>;
   ipad: Promise<IpadCheck>;
   system: Promise<SystemCheck>;
-  health: Promise<HealthResponse | null>;
 }
 
 async function loadAppVersion(): Promise<string | null> {
@@ -62,7 +59,6 @@ function loadChecks(): Checks {
     version: loadAppVersion(),
     ipad: loadIpad(),
     system: loadSystem(),
-    health: api.getHealth(),
   };
 }
 
@@ -175,20 +171,6 @@ function SshStatus({ check }: { check: Promise<SystemCheck> }) {
   );
 }
 
-function ApiStatus({ health }: { health: Promise<HealthResponse | null> }) {
-  const loaded = use(health);
-  return (
-    <>
-      <StatusRow label="API" state={loaded ? "ok" : "error"} />
-      <StatusRow
-        label="Database"
-        state={loaded?.database === "ok" ? "ok" : "error"}
-        {...(!loaded && { detail: "Unknown: API unreachable" })}
-      />
-    </>
-  );
-}
-
 export function Dashboard() {
   const [checks, setChecks] = useState(loadChecks);
   const [isRefreshing, startRefresh] = useTransition();
@@ -234,16 +216,6 @@ export function Dashboard() {
             </Suspense>
             <Suspense fallback={<StatusRow label="SSH" state="checking" />}>
               <SshStatus check={checks.system} />
-            </Suspense>
-            <Suspense
-              fallback={
-                <>
-                  <StatusRow label="API" state="checking" />
-                  <StatusRow label="Database" state="checking" />
-                </>
-              }
-            >
-              <ApiStatus health={checks.health} />
             </Suspense>
           </StatusList>
         </Panel>

@@ -16,6 +16,8 @@ Connect:
 ssh Bens-iPad
 ```
 
+It asks for the iPad's root password, which is not kept in this repository.
+
 The desktop app does not use the password. It connects through the USB cable and signs in with a key of its own, which is created and added to the iPad once:
 
 ```

@@ -1,4 +1,3 @@
-import "@/renderer/zod.ts";
 import "@/renderer/globals.css";
 
 import { StrictMode } from "react";
