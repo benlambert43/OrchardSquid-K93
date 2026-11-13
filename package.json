@@ -1,0 +1,85 @@
+{
+  "name": "orchardsquid-k93",
+  "version": "0.1.0",
+  "description": "OrchardSquid-K93 toolchain",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "workspaces": [
+    "orchardsquid-k93-shared",
+    "orchardsquid-k93-ui",
+    "orchardsquid-k93-server",
+    "orchardsquid-k93-web",
+    "orchardsquid-k93-desktop"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace orchardsquid-k93-web",
+    "dev:server": "npm run dev --workspace orchardsquid-k93-server",
+    "dev:desktop": "npm run dev --workspace orchardsquid-k93-desktop",
+    "build": "npm run build --workspace orchardsquid-k93-web",
+    "build:desktop": "npm run build --workspace orchardsquid-k93-desktop",
+    "make:desktop": "npm run make --workspace orchardsquid-k93-desktop",
+    "db:start": "docker compose -f docker-compose.dev.yml up --detach --wait --wait-timeout 60 && npm run db:migrate",
+    "db:stop": "docker compose -f docker-compose.dev.yml down",
+    "db:generate": "npm run db:generate --workspace orchardsquid-k93-server",
+    "db:migrate": "npm run db:migrate --workspace orchardsquid-k93-server",
+    "db:studio": "npm run db:studio --workspace orchardsquid-k93-server",
+    "lint": "eslint --max-warnings 0",
+    "lint:fix": "eslint --fix",
+    "lint:shell": "shellcheck scripts/*.sh .husky/pre-commit",
+    "lint:editor": "node scripts/check-editor-settings.ts",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces",
+    "test": "vitest run",
+    "test:shared": "vitest run --project orchardsquid-k93-shared",
+    "test:ui": "vitest run --project orchardsquid-k93-ui",
+    "test:server": "vitest run --project orchardsquid-k93-server",
+    "test:web": "vitest run --project orchardsquid-k93-web",
+    "test:desktop": "vitest run --project orchardsquid-k93-desktop",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "preflight": "sh scripts/preflight.sh",
+    "preflight:no-build": "sh scripts/preflight.sh --no-build",
+    "clean": "sh scripts/clean.sh",
+    "clean:force": "sh scripts/clean.sh --force",
+    "clean:dry-run": "sh scripts/clean.sh --dry-run",
+    "reset": "npm run clean && npm install && npm run db:start",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/eslint-plugin-jsx-a11y": "^6.10.1",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
+    "eslint-config-next": "16.4.6",
+    "eslint-plugin-better-tailwindcss": "^4.11.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "jiti": "^2.7.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.10.0",
+    "prettier-plugin-classnames": "^0.10.5",
+    "prettier-plugin-merge": "^0.10.2",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "eslint": "$eslint",
+    "@esbuild-kit/core-utils": {
+      "esbuild": ">=0.25.0"
+    }
+  },
+  "allowScripts": {
+    "fsevents": true,
+    "esbuild": true
+  }
+}

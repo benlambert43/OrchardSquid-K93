@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["vite/client"]
+  },
+  "include": [".", "../bridge.ts", "../../vitest.setup.ts"],
+  "exclude": []
+}

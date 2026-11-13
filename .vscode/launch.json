@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:server"
+    },
+    {
+      "name": "Desktop",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:desktop"
+    },
+    {
+      "name": "Web",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
+    }
+  ],
+  "compounds": [
+    { "name": "API and desktop", "configurations": ["API", "Desktop"] },
+    { "name": "API and web", "configurations": ["API", "Web"] }
+  ]
+}

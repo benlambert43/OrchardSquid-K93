@@ -1,0 +1,10 @@
+package-lock.json
+package.json
+
+.next/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+orchardsquid-k93-server/drizzle/
+orchardsquid-k93-desktop/.vite/
+orchardsquid-k93-desktop/out/
