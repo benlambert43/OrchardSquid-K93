@@ -1,7 +1,7 @@
 import { Detail, DetailList } from "@orchardsquid-k93/ui";
 
 import type { IpadSystem } from "@/bridge.ts";
-import { Unavailable } from "@/renderer/dashboard/Unavailable.tsx";
+import { Unavailable } from "@/renderer/ReportPanel.tsx";
 import { formatBitRate } from "@/renderer/format.ts";
 
 const lastChannelAt2GHz = 14;

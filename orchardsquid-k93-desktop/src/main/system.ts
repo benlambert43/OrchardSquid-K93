@@ -2,6 +2,7 @@ import type { Client } from "ssh2";
 
 import type {
   IpadBatteryHealth,
+  IpadSoftwareReport,
   IpadSystem,
   IpadSystemReport,
 } from "@/bridge.ts";
@@ -66,14 +67,13 @@ async function optional<Reading>(
 
 async function readSystem(client: Client): Promise<IpadSystem> {
   const stats = await readStats(client);
-  const [battery, network, software, crashReports] = await Promise.all([
+  const [battery, network, crashReports] = await Promise.all([
     optional("battery", readBattery(client)),
     optional("network", readNetwork(client)),
-    optional("software", readSoftware(client)),
     optional("crash reports", readCrashReports(client)),
   ]);
   const cpu = await readCpu(client);
-  return { ...stats, cpu, battery, network, software, crashReports };
+  return { ...stats, cpu, battery, network, crashReports };
 }
 
 export async function readIpadSystem(): Promise<IpadSystemReport> {
@@ -86,4 +86,11 @@ export async function readIpadSystem(): Promise<IpadSystemReport> {
 export async function readIpadBatteryHealth(): Promise<IpadBatteryHealth | null> {
   const reached = await inTurn(() => reach(readBatteryHealth));
   return reached.state === "ok" ? reached.reading : null;
+}
+
+export async function readIpadSoftware(): Promise<IpadSoftwareReport> {
+  const reached = await inTurn(() => reach(readSoftware));
+  return reached.state === "ok"
+    ? { state: "ok", software: reached.reading }
+    : reached;
 }

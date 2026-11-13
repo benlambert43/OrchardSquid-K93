@@ -1,15 +1,11 @@
 import { Detail, DetailList } from "@orchardsquid-k93/ui";
 
-import type { IpadSystem } from "@/bridge.ts";
-import { Unavailable } from "@/renderer/dashboard/Unavailable.tsx";
+import type { IpadSoftware } from "@/bridge.ts";
+import { formatNumber } from "@/renderer/format.ts";
 
 const missing = "Not found";
 
-export function SoftwareDetails({ system }: { system: IpadSystem }) {
-  const { software } = system;
-  if (!software) {
-    return <Unavailable />;
-  }
+export function SoftwareDetails({ software }: { software: IpadSoftware }) {
   return (
     <DetailList>
       <Detail label="Jailbreak">
@@ -21,7 +17,7 @@ export function SoftwareDetails({ system }: { system: IpadSystem }) {
       <Detail label="OpenSSL">{software.openssl ?? missing}</Detail>
       <Detail label="Safari">{software.safari ?? missing}</Detail>
       <Detail label="WebKit">{software.webkit ?? missing}</Detail>
-      <Detail label="Packages">{software.packages}</Detail>
+      <Detail label="Packages">{formatNumber(software.packages.length)}</Detail>
     </DetailList>
   );
 }

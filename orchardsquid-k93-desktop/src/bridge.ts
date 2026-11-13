@@ -59,6 +59,14 @@ export interface IpadNetwork {
   wifi: IpadWifi | null;
 }
 
+export interface IpadPackage {
+  id: string;
+  version: string;
+  section: string;
+  summary: string;
+  installedBytes: number | null;
+}
+
 export interface IpadSoftware {
   carbon: string | null;
   iocaste: boolean;
@@ -67,7 +75,8 @@ export interface IpadSoftware {
   openssl: string | null;
   safari: string | null;
   webkit: string | null;
-  packages: number;
+  packages: IpadPackage[];
+  generatedPackages: number;
 }
 
 export interface IpadCrashReports {
@@ -81,12 +90,16 @@ export interface IpadSystem extends IpadStats {
   cpu: IpadCpu;
   battery: IpadBattery | null;
   network: IpadNetwork | null;
-  software: IpadSoftware | null;
   crashReports: IpadCrashReports | null;
 }
 
 export type IpadSystemReport =
   | { state: "ok"; system: IpadSystem }
+  | { state: "signed-out" }
+  | { state: "unplugged" };
+
+export type IpadSoftwareReport =
+  | { state: "ok"; software: IpadSoftware }
   | { state: "signed-out" }
   | { state: "unplugged" };
 
@@ -120,6 +133,7 @@ export interface Requests {
   findIpad: () => Promise<Ipad | null>;
   readIpadSystem: () => Promise<IpadSystemReport>;
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
+  readIpadSoftware: () => Promise<IpadSoftwareReport>;
   exportSshBackup: () => Promise<SshBackupResult>;
   restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;

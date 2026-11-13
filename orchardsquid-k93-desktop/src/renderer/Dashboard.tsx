@@ -8,28 +8,22 @@ import {
   StatusList,
   StatusRow,
 } from "@orchardsquid-k93/ui";
-import { type ReactNode, Suspense, use, useState, useTransition } from "react";
+import { Suspense, use, useState, useTransition } from "react";
 
-import type {
-  Ipad,
-  IpadBatteryHealth,
-  IpadSystem,
-  IpadSystemReport,
-} from "@/bridge.ts";
+import type { Ipad, IpadBatteryHealth, IpadSystem } from "@/bridge.ts";
 import { BatteryDetails } from "@/renderer/dashboard/BatteryDetails.tsx";
 import { CrashReportDetails } from "@/renderer/dashboard/CrashReportDetails.tsx";
 import { NetworkDetails } from "@/renderer/dashboard/NetworkDetails.tsx";
 import { ProcessDetails } from "@/renderer/dashboard/ProcessDetails.tsx";
-import { SoftwareDetails } from "@/renderer/dashboard/SoftwareDetails.tsx";
 import { SystemDetails } from "@/renderer/dashboard/SystemDetails.tsx";
-import { Unavailable } from "@/renderer/dashboard/Unavailable.tsx";
+import { type Check, ReportPanel } from "@/renderer/ReportPanel.tsx";
 
 type IpadCheck =
   | { state: "connected"; ipad: Ipad }
   | { state: "unplugged" }
   | { state: "failed" };
 
-type SystemCheck = IpadSystemReport | { state: "failed" };
+type SystemCheck = Check<IpadSystem>;
 
 interface Checks {
   version: Promise<string | null>;
@@ -59,7 +53,10 @@ async function loadIpad(): Promise<IpadCheck> {
 
 async function loadSystem(): Promise<SystemCheck> {
   try {
-    return await window.bridge.readIpadSystem();
+    const report = await window.bridge.readIpadSystem();
+    return report.state === "ok"
+      ? { state: "ok", reading: report.system }
+      : report;
   } catch (error) {
     console.error("iPad system report failed", error);
     return { state: "failed" };
@@ -112,44 +109,6 @@ function IpadDetails({ check }: { check: Promise<IpadCheck> }) {
         <span className="font-mono text-xs">{ipad.udid}</span>
       </Detail>
     </DetailList>
-  );
-}
-
-type SystemNotes = Record<Exclude<SystemCheck["state"], "ok">, string>;
-
-const systemNotes: SystemNotes = {
-  unplugged: "Connect the iPad 2 with its USB cable.",
-  "signed-out":
-    "The iPad does not accept this computer's SSH key yet. The README explains how to add it.",
-  failed: "The iPad did not answer over SSH.",
-};
-
-interface SystemPanelProps {
-  title: string;
-  check: Promise<SystemCheck>;
-  notes?: SystemNotes;
-  children: (system: IpadSystem) => ReactNode;
-}
-
-function SystemReading({
-  check,
-  notes,
-  children,
-}: Omit<SystemPanelProps, "title">) {
-  const loaded = use(check);
-  if (loaded.state === "ok") {
-    return children(loaded.system);
-  }
-  return notes ? <PanelNote>{notes[loaded.state]}</PanelNote> : <Unavailable />;
-}
-
-function SystemPanel({ title, ...reading }: SystemPanelProps) {
-  return (
-    <Panel title={title}>
-      <Suspense fallback={<PanelNote>Checking…</PanelNote>}>
-        <SystemReading {...reading} />
-      </Suspense>
-    </Panel>
   );
 }
 
@@ -230,28 +189,25 @@ export function Dashboard() {
               </Suspense>
             </StatusList>
           </Panel>
-          <SystemPanel title="Software" check={checks.system}>
-            {(system) => <SoftwareDetails system={system} />}
-          </SystemPanel>
-          <SystemPanel title="Network" check={checks.system}>
-            {(system) => <NetworkDetails system={system} />}
-          </SystemPanel>
-        </div>
-        <div className="grid min-w-0 gap-6">
-          <SystemPanel title="System" check={checks.system} notes={systemNotes}>
-            {(system) => <SystemDetails system={system} />}
-          </SystemPanel>
-          <SystemPanel title="Top processes" check={checks.system}>
-            {(system) => <ProcessDetails system={system} />}
-          </SystemPanel>
-          <SystemPanel title="Battery" check={checks.system}>
+          <ReportPanel title="Battery" check={checks.system}>
             {(system) => (
               <BatteryDetails system={system} health={checks.batteryHealth} />
             )}
-          </SystemPanel>
-          <SystemPanel title="Crash reports" check={checks.system}>
+          </ReportPanel>
+          <ReportPanel title="Crash reports" check={checks.system}>
             {(system) => <CrashReportDetails system={system} />}
-          </SystemPanel>
+          </ReportPanel>
+        </div>
+        <div className="grid min-w-0 gap-6">
+          <ReportPanel title="System" check={checks.system} explains>
+            {(system) => <SystemDetails system={system} />}
+          </ReportPanel>
+          <ReportPanel title="Top processes" check={checks.system}>
+            {(system) => <ProcessDetails system={system} />}
+          </ReportPanel>
+          <ReportPanel title="Network" check={checks.system}>
+            {(system) => <NetworkDetails system={system} />}
+          </ReportPanel>
         </div>
       </div>
     </Page>

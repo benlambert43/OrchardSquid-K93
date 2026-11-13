@@ -1,6 +1,7 @@
 import {
   Cog6ToothIcon,
   CommandLineIcon,
+  CubeIcon,
   Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import { AppFrame } from "@orchardsquid-k93/ui";
@@ -10,9 +11,11 @@ import { Dashboard } from "@/renderer/Dashboard.tsx";
 import { type PageName, pageLinks, usePage } from "@/renderer/navigation.ts";
 import { Settings } from "@/renderer/Settings.tsx";
 import { Shell } from "@/renderer/Shell.tsx";
+import { Software } from "@/renderer/Software.tsx";
 
 const pages: Record<PageName, () => JSX.Element> = {
   dashboard: Dashboard,
+  software: Software,
   shell: Shell,
   settings: Settings,
 };
@@ -30,6 +33,12 @@ export function App() {
           label: "Dashboard",
           icon: <Squares2X2Icon aria-hidden className="size-5" />,
           current: page === "dashboard",
+        },
+        {
+          href: pageLinks.software,
+          label: "Software",
+          icon: <CubeIcon aria-hidden className="size-5" />,
+          current: page === "software",
         },
         {
           href: pageLinks.shell,

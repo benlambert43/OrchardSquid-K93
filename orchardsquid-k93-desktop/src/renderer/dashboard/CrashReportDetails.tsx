@@ -1,7 +1,7 @@
 import { Detail, DetailList, DetailNote } from "@orchardsquid-k93/ui";
 
 import type { IpadSystem } from "@/bridge.ts";
-import { Unavailable } from "@/renderer/dashboard/Unavailable.tsx";
+import { Unavailable } from "@/renderer/ReportPanel.tsx";
 import { formatDateTime } from "@/renderer/format.ts";
 
 export function CrashReportDetails({ system }: { system: IpadSystem }) {

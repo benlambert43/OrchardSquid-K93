@@ -10,7 +10,11 @@ import {
   submitShellPassword,
   writeShell,
 } from "@/main/shell.ts";
-import { readIpadBatteryHealth, readIpadSystem } from "@/main/system.ts";
+import {
+  readIpadBatteryHealth,
+  readIpadSoftware,
+  readIpadSystem,
+} from "@/main/system.ts";
 
 type Handlers = {
   [Method in keyof Requests]: (
@@ -30,6 +34,7 @@ export const handlers: Handlers = {
   findIpad,
   readIpadSystem,
   readIpadBatteryHealth,
+  readIpadSoftware,
   exportSshBackup,
   restoreSshBackup,
   openShell: (size) => {
