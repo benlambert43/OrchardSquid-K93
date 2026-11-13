@@ -3,7 +3,7 @@ import { DetailNote, PanelNote } from "@orchardsquid-k93/ui";
 import type { IpadDeveloperSetup, IpadSoftware } from "@/bridge.ts";
 import { developerPackages, developerSources } from "@/developerSetup.ts";
 import { formatNumber } from "@/renderer/format.ts";
-import { Command } from "@/renderer/software/Command.tsx";
+import { Command } from "@/renderer/dependencies/Command.tsx";
 
 type StepState = "done" | "todo";
 

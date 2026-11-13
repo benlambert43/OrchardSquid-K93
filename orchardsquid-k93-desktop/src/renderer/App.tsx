@@ -8,14 +8,14 @@ import { AppFrame } from "@orchardsquid-k93/ui";
 import type { JSX } from "react";
 
 import { Dashboard } from "@/renderer/Dashboard.tsx";
+import { Dependencies } from "@/renderer/Dependencies.tsx";
 import { type PageName, pageLinks, usePage } from "@/renderer/navigation.ts";
 import { Settings } from "@/renderer/Settings.tsx";
 import { Shell } from "@/renderer/Shell.tsx";
-import { Software } from "@/renderer/Software.tsx";
 
 const pages: Record<PageName, () => JSX.Element> = {
   dashboard: Dashboard,
-  software: Software,
+  dependencies: Dependencies,
   shell: Shell,
   settings: Settings,
 };
@@ -35,10 +35,10 @@ export function App() {
           current: page === "dashboard",
         },
         {
-          href: pageLinks.software,
-          label: "Software",
+          href: pageLinks.dependencies,
+          label: "Dependencies",
           icon: <CubeIcon aria-hidden className="size-5" />,
-          current: page === "software",
+          current: page === "dependencies",
         },
         {
           href: pageLinks.shell,

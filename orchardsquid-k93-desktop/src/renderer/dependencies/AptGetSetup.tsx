@@ -4,7 +4,7 @@ import { use } from "react";
 import type { IpadOffer, IpadSoftware } from "@/bridge.ts";
 import { developerPackages } from "@/developerSetup.ts";
 import type { Check } from "@/renderer/ReportPanel.tsx";
-import { Command } from "@/renderer/software/Command.tsx";
+import { Command } from "@/renderer/dependencies/Command.tsx";
 
 const aptMethod = "/usr/lib/apt/methods/http";
 const downloadFolder = "/tmp";

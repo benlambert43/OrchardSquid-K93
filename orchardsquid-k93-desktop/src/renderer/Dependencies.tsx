@@ -3,10 +3,10 @@ import { Suspense, useState, useTransition } from "react";
 
 import type { Connection, IpadSoftware, Transport } from "@/bridge.ts";
 import { type Check, ReportPanel } from "@/renderer/ReportPanel.tsx";
-import { AptGetSetup } from "@/renderer/software/AptGetSetup.tsx";
-import { DeveloperDependencies } from "@/renderer/software/DeveloperDependencies.tsx";
-import { PackageTable } from "@/renderer/software/PackageTable.tsx";
-import { SoftwareDetails } from "@/renderer/software/SoftwareDetails.tsx";
+import { AptGetSetup } from "@/renderer/dependencies/AptGetSetup.tsx";
+import { DeveloperDependencies } from "@/renderer/dependencies/DeveloperDependencies.tsx";
+import { PackageTable } from "@/renderer/dependencies/PackageTable.tsx";
+import { SoftwareDetails } from "@/renderer/dependencies/SoftwareDetails.tsx";
 import {
   loadConnection,
   TransportPicker,
@@ -34,7 +34,7 @@ function loadChecks(transport?: Transport): Checks {
   return { connection, software: connection.then(() => loadSoftware()) };
 }
 
-export function Software() {
+export function Dependencies() {
   const [checks, setChecks] = useState(() => loadChecks());
   const [isRefreshing, startRefresh] = useTransition();
   const refresh = (transport?: Transport) => {
@@ -46,7 +46,7 @@ export function Software() {
 
   return (
     <Page
-      title="Software"
+      title="Dependencies"
       actions={
         <div className="flex gap-2">
           <TransportPicker
