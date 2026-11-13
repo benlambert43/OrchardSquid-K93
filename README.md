@@ -226,6 +226,7 @@ SITE_URL=https://example.com npm run build
 ```text
 window (React, sandboxed) → API
 window → window.bridge → preload script → IPC → main process
+main process → usbmuxd → USB → iPad
 ```
 
 ### Commands
@@ -258,10 +259,25 @@ Paths are inside `orchardsquid-k93-desktop`.
 | `src/bridge.ts`                              | The `Bridge` interface, which lists every call the window can make to the main process; the two files below are typed against it |
 | `src/preload/index.ts`                       | Exposes one function per `Bridge` method as `window.bridge`, and nothing else                                                    |
 | `src/main/handlers.ts`                       | Implements each method                                                                                                           |
+| `src/main/usbmux.ts`                         | Talks to `usbmuxd`: finds a device attached by USB and opens a connection to a TCP port on it                                    |
+| `src/main/ipad.ts`                           | Finds the iPad 2 and asks it for its name, model, and iOS version                                                                |
 | `src/main/index.ts`                          | The window, and the security rules listed below                                                                                  |
 | `forge.config.ts`                            | Electron Forge: packaging, the Vite builds, and the fuses                                                                        |
 
-The bridge is for what only the main process can do, such as the app version it reports today. To add a call, add it to `Bridge`. TypeScript then fails until the preload script exposes it and `handlers.ts` implements it.
+The bridge is for what only the main process can do, such as reporting the app version and reaching the iPad. To add a call, add it to `Bridge`. TypeScript then fails until the preload script exposes it and `handlers.ts` implements it.
+
+### iPad
+
+The status list has an iPad row, which the main process fills in over USB. Nothing has to be installed on the iPad, and it does not have to trust the computer first.
+
+```text
+main process → /var/run/usbmuxd → USB → lockdownd on the iPad, port 62078
+```
+
+- **`usbmuxd`** is the service macOS runs to carry TCP connections to a device over its USB cable. `src/main/usbmux.ts` asks it which devices are attached and for a connection to a port on one of them. Any port the iPad listens on is reached the same way, which is how a shell will get there once the iPad runs an SSH server.
+- **The iPad 2** is told apart by its USB product ID, `0x129f`, which belongs to the Wi-Fi model: iPad2,1, or K93. Every other device is ignored.
+- **`lockdownd`** is the service on the iPad that answers a computer before the two are paired. `src/main/ipad.ts` sends it a `GetValue` request, and the row shows the name, model, and iOS version that come back.
+- **The check runs once**, when the window loads. Reload the window from the View menu after plugging the iPad in.
 
 ### Configuration
 

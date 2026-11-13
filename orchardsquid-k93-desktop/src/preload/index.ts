@@ -9,6 +9,7 @@ function invoke<Method extends keyof Bridge>(method: Method) {
 
 const bridge: Bridge = {
   getAppVersion: invoke("getAppVersion"),
+  findIpad: invoke("findIpad"),
 };
 
 contextBridge.exposeInMainWorld("bridge", bridge);

@@ -27,6 +27,31 @@ function MainProcessCheck({ version }: { version: Promise<string | null> }) {
   );
 }
 
+type IpadStatus =
+  { state: "ok"; detail: string } | { state: "error"; detail?: string };
+
+async function loadIpadStatus(): Promise<IpadStatus> {
+  if (!("bridge" in window)) {
+    return { state: "error" };
+  }
+  try {
+    const ipad = await window.bridge.findIpad();
+    return ipad
+      ? {
+          state: "ok",
+          detail: `${ipad.name} · ${ipad.productType} · iOS ${ipad.productVersion}`,
+        }
+      : { state: "error", detail: "Not connected over USB" };
+  } catch (error) {
+    console.error("iPad check failed", error);
+    return { state: "error" };
+  }
+}
+
+function IpadCheck({ status }: { status: Promise<IpadStatus> }) {
+  return <StatusRow label="iPad" {...use(status)} />;
+}
+
 function ApiChecks({ health }: { health: Promise<HealthResponse | null> }) {
   const loadedHealth = use(health);
   return (
@@ -43,12 +68,16 @@ function ApiChecks({ health }: { health: Promise<HealthResponse | null> }) {
 
 export function StatusChecks() {
   const [version] = useState(loadAppVersion);
+  const [ipadStatus] = useState(loadIpadStatus);
   const [health] = useState(api.getHealth);
 
   return (
     <StatusSection>
       <Suspense fallback={<StatusRow label="Electron main" state="checking" />}>
         <MainProcessCheck version={version} />
+      </Suspense>
+      <Suspense fallback={<StatusRow label="iPad" state="checking" />}>
+        <IpadCheck status={ipadStatus} />
       </Suspense>
       <Suspense
         fallback={
