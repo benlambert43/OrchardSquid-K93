@@ -2,11 +2,15 @@ import type { ComponentProps, ReactNode } from "react";
 
 export function Button({
   type = "button",
+  name,
+  value,
   disabled,
   onClick,
   children,
 }: {
   type?: "button" | "submit";
+  name?: string;
+  value?: string;
   disabled?: boolean;
   onClick?: ComponentProps<"button">["onClick"];
   children: ReactNode;
@@ -14,6 +18,8 @@ export function Button({
   return (
     <button
       type={type}
+      name={name}
+      value={value}
       disabled={disabled}
       onClick={onClick}
       className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm

@@ -11,7 +11,7 @@ import {
   readExactly,
 } from "@/main/usbmux.ts";
 
-const k93UsbProductId = 0x129f;
+export const k93UsbProductId = 0x129f;
 const lockdownPort = 62078;
 const lengthSize = 4;
 

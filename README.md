@@ -221,7 +221,7 @@ SITE_URL=https://example.com npm run build
 
 ## Desktop app
 
-`orchardsquid-k93-desktop` is an Electron app for looking after the iPad. It has two pages: the Dashboard, which shows what the iPad reports about itself, and the Shell, a terminal on the iPad. Both are built from the shared components. Its window is a React app compiled by Vite that calls the API directly: the server that sits between the web app and the API is there for caching and search engines, which a desktop app has no use for. The main process owns the window, its security rules, and every connection to the iPad, and talks to the window over a small typed bridge.
+`orchardsquid-k93-desktop` is an Electron app for looking after the iPad. It has three pages: the Dashboard, which shows what the iPad reports about itself, the Shell, a terminal on the iPad, and Settings, which backs up and restores the SSH key. All three are built from the shared components. Its window is a React app compiled by Vite that calls the API directly: the server that sits between the web app and the API is there for caching and search engines, which a desktop app has no use for. The main process owns the window, its security rules, and every connection to the iPad, and talks to the window over a small typed bridge.
 
 ```text
 window (React, sandboxed) → API
@@ -256,6 +256,8 @@ Paths are inside `orchardsquid-k93-desktop`.
 | `src/renderer/App.tsx`       | The sidebar and the page beside it, which `src/renderer/navigation.ts` picks from the part of the address after `#`                                                                          |
 | `src/renderer/Dashboard.tsx` | The Dashboard page: loads the checks and hands them to the shared components                                                                                                                 |
 | `src/renderer/Shell.tsx`     | The Shell page: an [xterm.js](https://xtermjs.org) terminal joined to the shell session in the main process                                                                                  |
+| `src/renderer/Settings.tsx`  | The Settings page, which holds the SSH backup panel                                                                                                                                          |
+| `src/renderer/SshBackup.tsx` | The SSH backup panel, with the Export backup and Restore backup buttons                                                                                                                      |
 | `src/renderer/format.ts`     | Writes sizes and durations the way the Dashboard shows them                                                                                                                                  |
 | `src/renderer/api.ts`        | The shared API client, pointed at `VITE_API_BASE_URL`                                                                                                                                        |
 | `src/env.ts`                 | The environment, parsed with Zod when the app starts                                                                                                                                         |
@@ -268,6 +270,11 @@ Paths are inside `orchardsquid-k93-desktop`.
 | `src/main/ssh.ts`            | Connects to the iPad's SSH server and signs in                                                                                                                                               |
 | `src/main/system.ts`         | Reads the iPad's uptime, load, memory, and storage over SSH                                                                                                                                  |
 | `src/main/shell.ts`          | Holds the shell session that the Shell page shows                                                                                                                                            |
+| `src/main/backup.ts`         | Gathers the key and the SSH settings that concern the iPad into a zip file                                                                                                                   |
+| `src/main/restore.ts`        | Reads a backup, checks it, and puts what it holds into `~/.ssh`                                                                                                                              |
+| `src/main/backupFormat.ts`   | The backup's format: a Zod schema for each JSON file, which export and restore share                                                                                                         |
+| `src/main/backupDialogs.ts`  | The dialogs around both: where to save, which file to open, and whether to replace a key                                                                                                     |
+| `src/main/sshFiles.ts`       | Where the files in `~/.ssh` are, and how the key and `config` are read                                                                                                                       |
 | `src/main/index.ts`          | The window, and the security rules listed below                                                                                                                                              |
 | `forge.config.ts`            | Electron Forge: packaging, the Vite builds, and the fuses                                                                                                                                    |
 
@@ -289,6 +296,28 @@ main process → /var/run/usbmuxd → USB → sshd on the iPad, port 22
 - **The host key is not checked.** The connection never leaves the cable, so there is no network on which something else could answer as the iPad.
 - **The System panel** comes from one command run over SSH, which `src/main/system.ts` parses. It uses `sysctl`, `vm_stat`, `df`, `ps`, and `dpkg-query`, all of which a freshly jailbroken iPad 2 had. Refresh asks the iPad again.
 - **The shell session** lives in the main process, so it outlasts a change of page and a reload of the window. `src/main/shell.ts` keeps the last megabyte of output and replays it when the Shell page comes back. Typing `exit` ends the session, and New session starts another.
+
+### SSH backup
+
+The Settings page saves and restores what a computer needs in order to sign in to the iPad. Export backup gathers it into a zip file, asks where to save the file, and writes it so that only its owner can read it. Restore backup reads such a file back in on another computer, which can then sign in without the password. The file holds the private key as it is on disk, so whoever has the file can sign in to the iPad as `root`.
+
+Everything in the zip file is JSON, and `src/main/backupFormat.ts` holds the schema that export and restore share:
+
+| File               | What it holds                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `manifest.json`    | The format's name and `version`, when and on which computer the backup was made, the app's version, and the names of the other files |
+| `key.json`         | The text of `~/.ssh/orchardsquid-k93` and of its `.pub`, with the key's type and fingerprint                                         |
+| `connection.json`  | How the app signs in: over USB, to which port, and as which user                                                                     |
+| `ipad.json`        | The iPad the key opens, and the host key its SSH server presented                                                                    |
+| `known-hosts.json` | The lines of `~/.ssh/known_hosts` that carry that host key                                                                           |
+| `ssh-config.json`  | The `Host` blocks of `~/.ssh/config` that name the key, or that point at an address from those lines                                 |
+
+- **Only what concerns the iPad is copied.** Other hosts in `known_hosts` and `config` stay out, and so do `Match` blocks and the iPad's password.
+- **Connect the iPad before exporting.** Its host key is what picks out the lines and blocks that belong to it. Without the iPad the backup still holds the key, but no `known_hosts` lines and only the `Host` blocks that name the key, and the Settings page says so.
+- **Restore treats the file as untrusted.** It changes nothing unless every file in the backup passes its schema, the key can be read, and each `known_hosts` line carries the host key in `ipad.json`. It writes only to `~/.ssh/orchardsquid-k93`, its `.pub`, `known_hosts`, and `config`, whatever path the backup names.
+- **Nothing is overwritten.** A different key already at `~/.ssh/orchardsquid-k93` is replaced only after a confirmation, and is kept beside the new one under a name that ends in `.replaced-` and the time. Lines and `Host` blocks are only added to `known_hosts` and `config`, and a `Host` whose name `config` already has is left as it is.
+- **Some `Host` blocks are left out.** A block is restored only if its names have no wildcards and every option in it is on the list in `src/main/restore.ts`, which has none that runs a command or sends the connection somewhere else, such as `ProxyCommand` and `ProxyJump`. The Settings page names the blocks it left out.
+- **By hand**, the same restore is a few commands, which `orchardsquid-k93-desktop/README.md` lists.
 
 ### Configuration
 

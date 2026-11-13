@@ -6,9 +6,9 @@ import { Client, type ParsedKey, utils } from "ssh2";
 
 import { openIpadPort } from "@/main/ipad.ts";
 
-const sshPort = 22;
-const username = "root";
-const keyPath = path.join(os.homedir(), ".ssh", "orchardsquid-k93");
+export const sshPort = 22;
+export const username = "root";
+export const keyPath = path.join(os.homedir(), ".ssh", "orchardsquid-k93");
 const passwordAttempts = 3;
 const handshakeTimeoutMs = 10_000;
 const keepaliveIntervalMs = 15_000;
@@ -81,6 +81,31 @@ export async function connectSsh(askPassword?: AskPassword): Promise<Client> {
         } else {
           refuse();
         }
+      },
+    });
+  });
+}
+
+export async function readHostKey(): Promise<Buffer | null> {
+  const socket = await openIpadPort(sshPort);
+  if (!socket) {
+    return null;
+  }
+  const client = new Client();
+  return new Promise((resolve) => {
+    let hostKey: Buffer | null = null;
+    const finish = () => {
+      resolve(hostKey);
+    };
+    client.on("error", finish);
+    client.on("close", finish);
+    client.connect({
+      sock: socket,
+      username,
+      readyTimeout: handshakeTimeoutMs,
+      hostVerifier: (key: Buffer) => {
+        hostKey = key;
+        return false;
       },
     });
   });

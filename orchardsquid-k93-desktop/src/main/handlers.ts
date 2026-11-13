@@ -2,6 +2,7 @@ import { app } from "electron";
 import { z } from "zod";
 
 import type { Requests } from "@/bridge.ts";
+import { exportSshBackup, restoreSshBackup } from "@/main/backupDialogs.ts";
 import { findIpad } from "@/main/ipad.ts";
 import {
   openShell,
@@ -28,6 +29,8 @@ export const handlers: Handlers = {
   getAppVersion: () => app.getVersion(),
   findIpad,
   readIpadSystem,
+  exportSshBackup,
+  restoreSshBackup,
   openShell: (size) => {
     openShell(terminalSizeSchema.parse(size));
   },

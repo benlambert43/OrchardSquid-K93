@@ -28,6 +28,20 @@ export type IpadSystemReport =
   | { state: "signed-out" }
   | { state: "unplugged" };
 
+export type SshBackupResult =
+  | { state: "saved"; path: string; ipadIncluded: boolean }
+  | { state: "cancelled" }
+  | { state: "no-key" };
+
+export type SshRestoreResult =
+  | {
+      state: "restored";
+      previousKey: string | null;
+      skippedConfigHosts: string[];
+    }
+  | { state: "cancelled" }
+  | { state: "invalid" };
+
 export interface TerminalSize {
   cols: number;
   rows: number;
@@ -43,6 +57,8 @@ export interface Requests {
   getAppVersion: () => Promise<string>;
   findIpad: () => Promise<Ipad | null>;
   readIpadSystem: () => Promise<IpadSystemReport>;
+  exportSshBackup: () => Promise<SshBackupResult>;
+  restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;
   writeShell: (input: string) => Promise<void>;
   resizeShell: (size: TerminalSize) => Promise<void>;

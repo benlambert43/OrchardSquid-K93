@@ -24,3 +24,15 @@ ssh-copy-id -i ~/.ssh/orchardsquid-k93.pub Bens-iPad
 ```
 
 Without the key, the Shell page asks for the password each time and the Dashboard's System panel stays empty.
+
+On the Settings page, Export backup saves the key and these settings as a zip file, and Restore backup sets another computer up from that file instead of the password. By hand, the same restore is:
+
+```
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+(umask 077 && unzip -p backup.zip key.json | jq -j .privateKey > ~/.ssh/orchardsquid-k93)
+unzip -p backup.zip key.json | jq -j .publicKey > ~/.ssh/orchardsquid-k93.pub
+unzip -p backup.zip known-hosts.json | jq -r '.entries[] | "\(.hosts) \(.type) \(.key)"' >> ~/.ssh/known_hosts
+unzip -p backup.zip ssh-config.json | jq -r '.hosts[] | "Host \(.host)", (.options[] | "    \(.name) \(.value)"), ""' >> ~/.ssh/config
+```
+
+The zip file holds the private key, so keep it as safe as the key itself.
