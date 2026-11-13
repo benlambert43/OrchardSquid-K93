@@ -232,16 +232,37 @@ function Sdk({
         onInstalled={onInstalled}
       >
         Downloads {sdkName}.sdk, about 5 MB, from the newest release of
-        github.com/theos/sdks and unpacks it into {theos.folder}/sdks. It holds
-        the iOS {sdkVersion} headers and the {architecture} libraries that
-        builds link against.
+        github.com/theos/sdks, unpacks it into {theos.folder}/sdks and adjusts
+        it so that this Xcode can build with it. It holds the iOS {sdkVersion}{" "}
+        headers and the {architecture} libraries that builds link against.
+      </InstallTool>
+    );
+  }
+  if (!sdk.adjusted) {
+    return (
+      <InstallTool
+        tool="sdk"
+        name={sdkLabel}
+        label="Adjust SDK"
+        busyLabel="Adjusting…"
+        firstStep="adjust"
+        disabled={disabled}
+        onInstalled={onInstalled}
+      >
+        Changes three things in {sdk.folder}, without which this Xcode cannot
+        build with it. Its library stubs stop listing the simulator
+        architectures, which the linker refuses. Its older module maps get the
+        file name the compiler now expects. And the C library&apos;s stub gains
+        thirteen functions, memcpy and strcmp among them, that iOS {sdkVersion}{" "}
+        has but the stub leaves out.
       </InstallTool>
     );
   }
   return (
     <Tool name={sdkLabel} ready value={sdk.version ?? "Installed"}>
       <ToolNote>
-        The iOS {sdkVersion} headers and the libraries that builds link against.
+        The iOS {sdkVersion} headers and the libraries that builds link against,
+        adjusted so that this Xcode can build with them.
       </ToolNote>
       <ToolDetails>
         <ToolDetail label="Folder" mono>
@@ -293,6 +314,27 @@ function Formula({
         </ToolDetail>
       </ToolDetails>
     </Tool>
+  );
+}
+
+export function isToolchainReady({
+  xcode,
+  homebrew,
+  theos,
+  sdk,
+  ldid,
+  xz,
+}: LaptopToolchain): boolean {
+  return (
+    xcode !== null &&
+    xcode.full &&
+    xcode.armv7 &&
+    homebrew !== null &&
+    theos.state === "installed" &&
+    sdk !== null &&
+    sdk.adjusted &&
+    ldid !== null &&
+    xz !== null
   );
 }
 

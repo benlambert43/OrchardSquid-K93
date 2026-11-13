@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import type { LaptopInstall } from "@/bridge.ts";
 import {
+  type DevelopmentStep,
   developmentTarget,
   firstInstallSteps,
   type LaptopInstallOption,
@@ -14,6 +15,8 @@ import {
 } from "@/developmentSetup.ts";
 import { exists } from "@/main/development/paths.ts";
 import { lastLines, runProcess } from "@/main/development/process.ts";
+import { adjustSdk, isSdkAdjusted } from "@/main/development/sdk.ts";
+import { exclusively } from "@/main/development/tasks.ts";
 import {
   type Announce,
   type ReportProgress,
@@ -196,6 +199,9 @@ const installSdk: Installer = async (_options, announce) => {
   const sdks = path.join(theos, "sdks");
   const target = path.join(sdks, sdkFolder);
   if (await exists(target)) {
+    if (!(await isSdkAdjusted(target))) {
+      await adjustSdk(target, announce);
+    }
     return { state: "installed" };
   }
   if (!(await exists(path.join(theos, "makefiles")))) {
@@ -226,6 +232,7 @@ const installSdk: Installer = async (_options, announce) => {
     if (code !== 0 || !(await exists(unpacked))) {
       return { state: "failed", output: lastLines(output) };
     }
+    await adjustSdk(unpacked, announce);
     await rename(unpacked, target);
   } finally {
     await rm(staging, { recursive: true, force: true });
@@ -261,31 +268,32 @@ const installers: Record<LaptopToolName, Installer> = {
   xz: installFormula("xz"),
 };
 
-let running = false;
+async function findFirstStep(tool: LaptopToolName): Promise<DevelopmentStep> {
+  const sdk = path.join(await findTheosFolder(), "sdks", sdkFolder);
+  return tool === "sdk" && (await exists(sdk))
+    ? "adjust"
+    : firstInstallSteps[tool];
+}
 
-export async function installLaptopTool(
+export function installLaptopTool(
   tool: LaptopToolName,
   options: LaptopInstallOption[],
   report: ReportProgress,
 ): Promise<LaptopInstall> {
-  if (running) {
-    return { state: "busy" };
-  }
-  running = true;
-  try {
-    return await withProgress(
-      tool,
-      firstInstallSteps[tool],
-      report,
-      (announce) => installers[tool](new Set(options), announce),
-    );
-  } catch (error) {
-    console.error(`${tool} could not be installed`, error);
-    return {
-      state: "failed",
-      output: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    running = false;
-  }
+  return exclusively(async () => {
+    try {
+      return await withProgress(
+        tool,
+        await findFirstStep(tool),
+        report,
+        (announce) => installers[tool](new Set(options), announce),
+      );
+    } catch (error) {
+      console.error(`${tool} could not be installed`, error);
+      return {
+        state: "failed",
+        output: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
 }

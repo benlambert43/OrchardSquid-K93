@@ -21,6 +21,23 @@ export const laptopInstallOptions = ["shellProfile"] as const;
 
 export type LaptopInstallOption = (typeof laptopInstallOptions)[number];
 
+export const projectTemplates = {
+  tool: "iphone/tool",
+  application: "iphone/application_modern",
+  tweak: "iphone/tweak",
+  library: "iphone/library",
+} as const;
+
+export type ProjectTemplate = keyof typeof projectTemplates;
+
+export const projectNamePattern = "[A-Za-z0-9][A-Za-z0-9+.\\-]*";
+
+export const packageIdPattern = "[a-z0-9][a-z0-9+.\\-]+";
+
+export const buildOptions = ["install"] as const;
+
+export type BuildOption = (typeof buildOptions)[number];
+
 export const developmentSteps = [
   "clone",
   "submodules",
@@ -28,7 +45,9 @@ export const developmentSteps = [
   "release",
   "download",
   "unpack",
+  "adjust",
   "homebrew",
+  "build",
   "copy",
   "dpkg",
   "homeScreen",
@@ -36,7 +55,7 @@ export const developmentSteps = [
 
 export type DevelopmentStep = (typeof developmentSteps)[number];
 
-export type DevelopmentTask = LaptopToolName | "package";
+export type DevelopmentTask = LaptopToolName | "build" | "package";
 
 export const firstInstallSteps: Record<LaptopToolName, DevelopmentStep> = {
   theos: "clone",

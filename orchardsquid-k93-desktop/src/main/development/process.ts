@@ -6,7 +6,7 @@ import { toolEnvironment } from "@/main/development/tools.ts";
 const keptCharacters = 256 * 1024;
 const reportedLines = 12;
 const escapeSequence = new RegExp(String.raw`\x1b\[[0-9;?]*[A-Za-z]`, "g");
-const progressLine = /:\s+\d+% \(\d+\/\d+\)/;
+const unhelpfulLine = /:\s+\d+% \(\d+\/\d+\)|^make(?:\[\d+\])?: \*\*\*/;
 
 export interface ProcessResult {
   code: number | null;
@@ -16,6 +16,8 @@ export interface ProcessResult {
 
 interface ProcessOptions {
   quietTimeoutMs: number;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
   input?: Uint8Array;
   onLine?: (line: string) => void;
 }
@@ -27,11 +29,12 @@ function keep(text: string, added: string): string {
 export function runProcess(
   file: string,
   args: string[],
-  { quietTimeoutMs, input, onLine }: ProcessOptions,
+  { quietTimeoutMs, cwd, env, input, onLine }: ProcessOptions,
 ): Promise<ProcessResult> {
   return new Promise((resolve) => {
     const child = spawn(file, args, {
-      env: toolEnvironment(),
+      cwd,
+      env: { ...toolEnvironment(), ...env },
       stdio: [input ? "pipe" : "ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -86,7 +89,7 @@ export function runProcess(
 export function lastLines(output: string): string {
   return output
     .split(/[\r\n]/)
-    .filter((line) => line.trim() && !progressLine.test(line))
+    .filter((line) => line.trim() && !unhelpfulLine.test(line))
     .slice(-reportedLines)
     .join("\n");
 }

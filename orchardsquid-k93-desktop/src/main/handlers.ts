@@ -4,7 +4,14 @@ import { z } from "zod";
 import type { DevelopmentProgress, Requests } from "@/bridge.ts";
 import { appActions } from "@/appActions.ts";
 import { cleanUpOptions } from "@/cleanUpSteps.ts";
-import { laptopInstallOptions, laptopTools } from "@/developmentSetup.ts";
+import {
+  buildOptions,
+  laptopInstallOptions,
+  laptopTools,
+  packageIdPattern,
+  projectNamePattern,
+  projectTemplates,
+} from "@/developmentSetup.ts";
 import { exportSshBackup, restoreSshBackup } from "@/main/backupDialogs.ts";
 import {
   chooseTransport,
@@ -16,6 +23,12 @@ import {
 import { readLaptopToolchain } from "@/main/development.ts";
 import { installLaptopTool } from "@/main/development/install.ts";
 import { installIpadPackage } from "@/main/development/package.ts";
+import {
+  buildDevelopmentProject,
+  createDevelopmentProject,
+  openDevelopmentProject,
+  readDevelopmentProject,
+} from "@/main/development/project.ts";
 import {
   addSshHost,
   readSshHost,
@@ -71,6 +84,22 @@ const laptopToolSchema = z.enum(laptopTools);
 
 const laptopInstallOptionsSchema = z.array(z.enum(laptopInstallOptions));
 
+const projectTemplateSchema = z.enum(
+  Object.keys(projectTemplates) as (keyof typeof projectTemplates)[],
+);
+
+const projectNameSchema = z
+  .string()
+  .max(64)
+  .regex(new RegExp(`^(?:${projectNamePattern})$`));
+
+const packageIdSchema = z
+  .string()
+  .max(128)
+  .regex(new RegExp(`^(?:${packageIdPattern})$`));
+
+const buildOptionsSchema = z.array(z.enum(buildOptions));
+
 function reportDevelopment(progress: DevelopmentProgress): void {
   send("developmentProgress", progress);
 }
@@ -105,6 +134,19 @@ export const handlers: Handlers = {
   testSshHost,
   readIpadDevelopment,
   installIpadPackage: () => installIpadPackage(reportDevelopment),
+  readDevelopmentProject,
+  createDevelopmentProject: (template, name, packageId) =>
+    createDevelopmentProject(
+      projectTemplateSchema.parse(template),
+      projectNameSchema.parse(name),
+      packageIdSchema.parse(packageId),
+    ),
+  openDevelopmentProject,
+  buildDevelopmentProject: (options) =>
+    buildDevelopmentProject(
+      buildOptionsSchema.parse(options),
+      reportDevelopment,
+    ),
   cleanUpIpad: (options) =>
     cleanUpIpad(cleanUpOptionsSchema.parse(options), (progress) => {
       send("cleanUpProgress", progress);

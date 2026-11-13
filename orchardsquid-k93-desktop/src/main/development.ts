@@ -12,6 +12,7 @@ import type {
 } from "@/bridge.ts";
 import { developmentTarget } from "@/developmentSetup.ts";
 import { exists, shortenHome } from "@/main/development/paths.ts";
+import { isSdkAdjusted } from "@/main/development/sdk.ts";
 import { readShellSetting } from "@/main/development/shellProfile.ts";
 import {
   findTheosFolder,
@@ -137,6 +138,7 @@ async function readSdk(theos: string): Promise<SdkTool | null> {
   const architectures = /^archs:\s*\[([^\]]*)\]/m.exec(library)?.[1] ?? "";
   return {
     folder: shortenHome(folder),
+    adjusted: await isSdkAdjusted(folder),
     version: settings?.Version ?? null,
     architectures: architectures
       .split(",")

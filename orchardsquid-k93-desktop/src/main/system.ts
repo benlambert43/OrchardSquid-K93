@@ -26,10 +26,7 @@ import {
   readConnection,
   rememberWifiAddress,
 } from "@/main/connection.ts";
-import {
-  type ReportProgress,
-  withProgress,
-} from "@/main/development/progress.ts";
+import type { Announce } from "@/main/development/progress.ts";
 import { findIpadOverUsb } from "@/main/ipad.ts";
 import { readSetting, writeSetting } from "@/main/settings.ts";
 import {
@@ -181,15 +178,13 @@ export async function readIpadDevelopment(): Promise<IpadDevelopmentReport> {
 export async function installPackageOnIpad(
   file: string,
   contents: Buffer,
-  report: ReportProgress,
+  announce: Announce,
 ): Promise<PackageInstallReport> {
   const reached = await inTurn(() =>
     reach((client) =>
-      withProgress("package", "copy", report, (announce) =>
-        installDeb(client, contents, packageFile, (step, fraction) => {
-          announce(step, file, fraction);
-        }),
-      ),
+      installDeb(client, contents, packageFile, (step, fraction) => {
+        announce(step, file, fraction);
+      }),
     ),
   );
   return reached.state === "ok" ? { ...reached.reading, file } : reached;

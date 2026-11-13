@@ -4,7 +4,10 @@ import path from "node:path";
 import { BrowserWindow, dialog, type OpenDialogOptions } from "electron";
 
 import type { PackageInstallReport } from "@/bridge.ts";
-import type { ReportProgress } from "@/main/development/progress.ts";
+import {
+  type ReportProgress,
+  withProgress,
+} from "@/main/development/progress.ts";
 import { installPackageOnIpad } from "@/main/system.ts";
 
 const maxPackageBytes = 256 * 1024 * 1024;
@@ -36,5 +39,7 @@ export async function installIpadPackage(
   ) {
     return { state: "invalid", file };
   }
-  return installPackageOnIpad(file, contents, report);
+  return withProgress("package", "copy", report, (announce) =>
+    installPackageOnIpad(file, contents, announce),
+  );
 }

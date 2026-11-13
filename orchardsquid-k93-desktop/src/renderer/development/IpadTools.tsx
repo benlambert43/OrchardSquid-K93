@@ -18,6 +18,10 @@ function describeConnection(connection: Connection): string {
     : transport;
 }
 
+export function isIpadReady({ openssh, dpkg }: IpadDevelopment): boolean {
+  return openssh.version !== null && dpkg.version !== null;
+}
+
 export function IpadTools({ development }: { development: IpadDevelopment }) {
   const { connection, openssh, dpkg } = development;
   return (

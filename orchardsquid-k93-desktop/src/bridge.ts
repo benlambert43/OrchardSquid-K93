@@ -1,10 +1,12 @@
 import type { AppAction } from "@/appActions.ts";
 import type { CleanUpOption, CleanUpStep } from "@/cleanUpSteps.ts";
 import type {
+  BuildOption,
   DevelopmentStep,
   DevelopmentTask,
   LaptopInstallOption,
   LaptopToolName,
+  ProjectTemplate,
 } from "@/developmentSetup.ts";
 
 export interface Ipad {
@@ -186,6 +188,7 @@ export interface SdkTool {
   folder: string;
   version: string | null;
   architectures: string[];
+  adjusted: boolean;
 }
 
 export interface LaptopToolchain {
@@ -276,6 +279,39 @@ export type PackageInstall =
 
 export type PackageInstallReport =
   PackageInstall | { state: "signed-out" } | Unreachable;
+
+export interface DevelopmentProject {
+  folder: string;
+  name: string;
+  kind: string | null;
+  package: string | null;
+  version: string | null;
+  target: string | null;
+  architectures: string | null;
+  latestPackage: { file: string; builtAt: number } | null;
+}
+
+export type ProjectReading =
+  | { state: "none" }
+  | { state: "missing"; folder: string }
+  | { state: "open"; project: DevelopmentProject };
+
+export type ProjectCreate =
+  | { state: "created"; folder: string }
+  | { state: "cancelled" }
+  | { state: "exists"; folder: string }
+  | { state: "failed"; output: string };
+
+export type ProjectOpen =
+  | { state: "opened"; folder: string }
+  | { state: "cancelled" }
+  | { state: "invalid"; folder: string };
+
+export type ProjectBuild =
+  | { state: "built"; file: string; install: PackageInstallReport | null }
+  | { state: "busy" }
+  | { state: "no-project" }
+  | { state: "failed"; output: string };
 
 export interface IpadCleanUp {
   moved: string[];
@@ -384,6 +420,14 @@ export interface Requests {
   testSshHost: () => Promise<SshHostTest>;
   readIpadDevelopment: () => Promise<IpadDevelopmentReport>;
   installIpadPackage: () => Promise<PackageInstallReport>;
+  readDevelopmentProject: () => Promise<ProjectReading>;
+  createDevelopmentProject: (
+    template: ProjectTemplate,
+    name: string,
+    packageId: string,
+  ) => Promise<ProjectCreate>;
+  openDevelopmentProject: () => Promise<ProjectOpen>;
+  buildDevelopmentProject: (options: BuildOption[]) => Promise<ProjectBuild>;
   cleanUpIpad: (options: CleanUpOption[]) => Promise<IpadCleanUpReport>;
   installZebraOnIpad: () => Promise<ZebraInstallReport>;
   readIpadApps: () => Promise<IpadAppsReport>;

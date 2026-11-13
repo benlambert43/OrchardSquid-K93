@@ -2,6 +2,7 @@ import { type ReactNode, useActionState } from "react";
 
 import type { LaptopInstall } from "@/bridge.ts";
 import {
+  type DevelopmentStep,
   firstInstallSteps,
   laptopInstallOptions,
   type LaptopToolName,
@@ -22,7 +23,7 @@ type Problem = Exclude<NonNullable<Outcome>["state"], "installed">;
 function describe(name: string, problem: Problem): string {
   switch (problem) {
     case "busy":
-      return "Another install is still running. Try again when it has finished.";
+      return "Another task is still running. Try again when it has finished.";
     case "occupied":
       return `${name}'s folder already holds something else. Move it away, then try again.`;
     case "unavailable":
@@ -30,9 +31,9 @@ function describe(name: string, problem: Problem): string {
     case "mismatch":
       return `The download did not match what GitHub lists for ${name}, so nothing was unpacked.`;
     case "failed":
-      return `${name} was not installed. The last lines it printed:`;
+      return `${name} could not be set up. The last lines it printed:`;
     case "error":
-      return `${name} could not be installed.`;
+      return `${name} could not be set up.`;
   }
 }
 
@@ -52,6 +53,8 @@ export function InstallTool({
   tool,
   name,
   label,
+  busyLabel = "Installing…",
+  firstStep = firstInstallSteps[tool],
   disabled,
   fields,
   onInstalled,
@@ -60,6 +63,8 @@ export function InstallTool({
   tool: LaptopToolName;
   name: string;
   label: string;
+  busyLabel?: string;
+  firstStep?: DevelopmentStep;
   disabled: boolean;
   fields?: ReactNode;
   onInstalled: () => Promise<unknown>;
@@ -75,14 +80,14 @@ export function InstallTool({
               tool,
               laptopInstallOptions.filter((option) => chosen.includes(option)),
             ),
-          { task: tool, step: firstInstallSteps[tool] },
+          { task: tool, step: firstStep },
         );
         if (report.state === "installed") {
           await onInstalled();
         }
         return report;
       } catch (error) {
-        console.error(`${name} could not be installed`, error);
+        console.error(`${name} could not be set up`, error);
         return { state: "error" };
       }
     },
@@ -96,7 +101,7 @@ export function InstallTool({
       ready={false}
       action={
         <ConfirmButton
-          label={isBusy ? "Installing…" : label}
+          label={isBusy ? busyLabel : label}
           title={label}
           disabled={disabled || isBusy}
           action={action}
@@ -109,7 +114,7 @@ export function InstallTool({
         progress?.task === tool ? (
           <div className="mt-2">
             <TaskProgress
-              label={`${name} install progress`}
+              label={`${name} setup progress`}
               step={stepLabels[progress.step]}
               item={progress.item}
               fraction={progress.fraction}
