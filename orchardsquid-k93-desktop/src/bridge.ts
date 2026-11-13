@@ -87,18 +87,11 @@ export interface IpadPackage {
 export interface IpadOffer {
   source: string;
   version: string;
-  url: string | null;
-  md5: string | null;
-  installedBytes: number | null;
 }
 
 export interface IpadDeveloperSetup {
   sources: string[];
   defaultPasswordAccounts: string[];
-  aptGet: boolean;
-  rootCertificates: boolean;
-  systemFreeBytes: number | null;
-  compilerFolderLink: string | null;
   offers: Partial<Record<string, IpadOffer[]>>;
 }
 

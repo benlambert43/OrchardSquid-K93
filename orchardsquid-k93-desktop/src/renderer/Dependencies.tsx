@@ -1,9 +1,8 @@
 import { Button, Page } from "@orchardsquid-k93/ui";
-import { Suspense, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import type { Connection, IpadSoftware, Transport } from "@/bridge.ts";
 import { type Check, ReportPanel } from "@/renderer/ReportPanel.tsx";
-import { AptGetSetup } from "@/renderer/dependencies/AptGetSetup.tsx";
 import { DeveloperDependencies } from "@/renderer/dependencies/DeveloperDependencies.tsx";
 import { PackageTable } from "@/renderer/dependencies/PackageTable.tsx";
 import { SoftwareDetails } from "@/renderer/dependencies/SoftwareDetails.tsx";
@@ -66,9 +65,6 @@ export function Dependencies() {
       }
     >
       <div className="grid max-w-3xl gap-6">
-        <Suspense fallback={null}>
-          <AptGetSetup check={check} />
-        </Suspense>
         <ReportPanel title="Developer Dependencies" check={check} explains>
           {(software) => <DeveloperDependencies software={software} />}
         </ReportPanel>
