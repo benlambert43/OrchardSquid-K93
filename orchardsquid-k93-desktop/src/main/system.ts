@@ -1,82 +1,43 @@
-import type { IpadSystem, IpadSystemReport } from "@/bridge.ts";
+import type { Client } from "ssh2";
+
+import type {
+  IpadBatteryHealth,
+  IpadSystem,
+  IpadSystemReport,
+} from "@/bridge.ts";
 import {
   connectSsh,
   IpadUnpluggedError,
-  run,
   SignInRefusedError,
 } from "@/main/ssh.ts";
+import { readBattery } from "@/main/system/battery.ts";
+import { readBatteryHealth } from "@/main/system/batteryHealth.ts";
+import { readCpu } from "@/main/system/cpu.ts";
+import { readCrashReports } from "@/main/system/crashReports.ts";
+import { readNetwork } from "@/main/system/network.ts";
+import { readSoftware } from "@/main/system/software.ts";
+import { readStats } from "@/main/system/stats.ts";
 
-const volumes = [
-  { name: "System", mount: "/" },
-  { name: "Data", mount: "/private/var" },
-];
+type Reached<Reading> =
+  | { state: "ok"; reading: Reading }
+  | { state: "signed-out" }
+  | { state: "unplugged" };
 
-const command = [
-  `printf 'kernel=%s\\n' "$(uname -sr)"`,
-  "date +now=%s",
-  "sysctl kern.boottime vm.loadavg hw.memsize",
-  "vm_stat",
-  `df -k ${volumes.map(({ mount }) => mount).join(" ")}`,
-  `printf 'processes=%s\\n' "$(ps -A | sed -n '$=')"`,
-  `printf 'packages=%s\\n' "$(dpkg-query -W | sed -n '$=')"`,
-].join("; ");
+let turn: Promise<unknown> = Promise.resolve();
 
-const kilobyte = 1024;
-
-function text(report: string, pattern: RegExp): string {
-  const value = pattern.exec(report)?.[1];
-  if (value === undefined) {
-    throw new Error(`The iPad's system report has no ${pattern.source}`);
-  }
-  return value;
+function inTurn<Result>(task: () => Promise<Result>): Promise<Result> {
+  const result = turn.then(task);
+  turn = result.catch(() => undefined);
+  return result;
 }
 
-function number(report: string, pattern: RegExp): number {
-  return Number(text(report, pattern));
-}
-
-function parse(report: string): IpadSystem {
-  const pageSize = number(report, /page size of (\d+) bytes/);
-  const availablePages =
-    number(report, /^Pages free:\s+(\d+)\./m) +
-    number(report, /^Pages inactive:\s+(\d+)\./m) +
-    number(report, /^Pages speculative:\s+(\d+)\./m);
-  const memoryBytes = number(report, /^hw\.memsize: (\d+)$/m);
-  return {
-    kernel: text(report, /^kernel=(.+)$/m),
-    uptimeSeconds:
-      number(report, /^now=(\d+)$/m) -
-      number(report, /^kern\.boottime: \{ sec = (\d+)/m),
-    loadAverage: number(report, /^vm\.loadavg: \{ ([\d.]+) /m),
-    memory: {
-      usedBytes: memoryBytes - availablePages * pageSize,
-      totalBytes: memoryBytes,
-    },
-    volumes: volumes.map(({ name, mount }) => {
-      const [, used, available] =
-        new RegExp(
-          String.raw`^\S+\s+\d+\s+(\d+)\s+(\d+)\s+\d+%\s+${mount}$`,
-          "m",
-        ).exec(report) ?? [];
-      if (used === undefined || available === undefined) {
-        throw new Error(`The iPad's system report has no volume at ${mount}`);
-      }
-      return {
-        name,
-        usedBytes: Number(used) * kilobyte,
-        totalBytes: (Number(used) + Number(available)) * kilobyte,
-      };
-    }),
-    processes: number(report, /^processes=(\d+)$/m) - 1,
-    packages: number(report, /^packages=(\d+)$/m),
-  };
-}
-
-export async function readIpadSystem(): Promise<IpadSystemReport> {
+async function reach<Reading>(
+  read: (client: Client) => Promise<Reading>,
+): Promise<Reached<Reading>> {
   try {
     const client = await connectSsh();
     try {
-      return { state: "ok", system: parse(await run(client, command)) };
+      return { state: "ok", reading: await read(client) };
     } finally {
       client.end();
     }
@@ -89,4 +50,40 @@ export async function readIpadSystem(): Promise<IpadSystemReport> {
     }
     throw error;
   }
+}
+
+async function optional<Reading>(
+  name: string,
+  reading: Promise<Reading>,
+): Promise<Reading | null> {
+  try {
+    return await reading;
+  } catch (error) {
+    console.error(`The iPad's ${name} could not be read`, error);
+    return null;
+  }
+}
+
+async function readSystem(client: Client): Promise<IpadSystem> {
+  const stats = await readStats(client);
+  const [battery, network, software, crashReports] = await Promise.all([
+    optional("battery", readBattery(client)),
+    optional("network", readNetwork(client)),
+    optional("software", readSoftware(client)),
+    optional("crash reports", readCrashReports(client)),
+  ]);
+  const cpu = await readCpu(client);
+  return { ...stats, cpu, battery, network, software, crashReports };
+}
+
+export async function readIpadSystem(): Promise<IpadSystemReport> {
+  const reached = await inTurn(() => reach(readSystem));
+  return reached.state === "ok"
+    ? { state: "ok", system: reached.reading }
+    : reached;
+}
+
+export async function readIpadBatteryHealth(): Promise<IpadBatteryHealth | null> {
+  const reached = await inTurn(() => reach(readBatteryHealth));
+  return reached.state === "ok" ? reached.reading : null;
 }

@@ -8,10 +8,21 @@ import {
   StatusList,
   StatusRow,
 } from "@orchardsquid-k93/ui";
-import { Suspense, use, useState, useTransition } from "react";
+import { type ReactNode, Suspense, use, useState, useTransition } from "react";
 
-import type { Ipad, IpadSystemReport, Usage } from "@/bridge.ts";
-import { formatBytes, formatDuration } from "@/renderer/format.ts";
+import type {
+  Ipad,
+  IpadBatteryHealth,
+  IpadSystem,
+  IpadSystemReport,
+} from "@/bridge.ts";
+import { BatteryDetails } from "@/renderer/dashboard/BatteryDetails.tsx";
+import { CrashReportDetails } from "@/renderer/dashboard/CrashReportDetails.tsx";
+import { NetworkDetails } from "@/renderer/dashboard/NetworkDetails.tsx";
+import { ProcessDetails } from "@/renderer/dashboard/ProcessDetails.tsx";
+import { SoftwareDetails } from "@/renderer/dashboard/SoftwareDetails.tsx";
+import { SystemDetails } from "@/renderer/dashboard/SystemDetails.tsx";
+import { Unavailable } from "@/renderer/dashboard/Unavailable.tsx";
 
 type IpadCheck =
   | { state: "connected"; ipad: Ipad }
@@ -24,6 +35,7 @@ interface Checks {
   version: Promise<string | null>;
   ipad: Promise<IpadCheck>;
   system: Promise<SystemCheck>;
+  batteryHealth: Promise<IpadBatteryHealth | null>;
 }
 
 async function loadAppVersion(): Promise<string | null> {
@@ -54,16 +66,22 @@ async function loadSystem(): Promise<SystemCheck> {
   }
 }
 
+async function loadBatteryHealth(): Promise<IpadBatteryHealth | null> {
+  try {
+    return await window.bridge.readIpadBatteryHealth();
+  } catch (error) {
+    console.error("iPad battery health check failed", error);
+    return null;
+  }
+}
+
 function loadChecks(): Checks {
   return {
     version: loadAppVersion(),
     ipad: loadIpad(),
     system: loadSystem(),
+    batteryHealth: loadBatteryHealth(),
   };
-}
-
-function usage({ usedBytes, totalBytes }: Usage): string {
-  return `${formatBytes(usedBytes)} of ${formatBytes(totalBytes)}`;
 }
 
 function IpadDetails({ check }: { check: Promise<IpadCheck> }) {
@@ -97,42 +115,41 @@ function IpadDetails({ check }: { check: Promise<IpadCheck> }) {
   );
 }
 
-const systemNotes: Record<Exclude<SystemCheck["state"], "ok">, string> = {
+type SystemNotes = Record<Exclude<SystemCheck["state"], "ok">, string>;
+
+const systemNotes: SystemNotes = {
   unplugged: "Connect the iPad 2 with its USB cable.",
   "signed-out":
     "The iPad does not accept this computer's SSH key yet. The README explains how to add it.",
   failed: "The iPad did not answer over SSH.",
 };
 
-function SystemDetails({ check }: { check: Promise<SystemCheck> }) {
+interface SystemPanelProps {
+  title: string;
+  check: Promise<SystemCheck>;
+  notes?: SystemNotes;
+  children: (system: IpadSystem) => ReactNode;
+}
+
+function SystemReading({
+  check,
+  notes,
+  children,
+}: Omit<SystemPanelProps, "title">) {
   const loaded = use(check);
-  if (loaded.state !== "ok") {
-    return <PanelNote>{systemNotes[loaded.state]}</PanelNote>;
+  if (loaded.state === "ok") {
+    return children(loaded.system);
   }
-  const { system } = loaded;
+  return notes ? <PanelNote>{notes[loaded.state]}</PanelNote> : <Unavailable />;
+}
+
+function SystemPanel({ title, ...reading }: SystemPanelProps) {
   return (
-    <DetailList>
-      <Detail label="Uptime">{formatDuration(system.uptimeSeconds)}</Detail>
-      <Detail label="Load average">{system.loadAverage.toFixed(2)}</Detail>
-      <Detail
-        label="Memory"
-        meter={system.memory.usedBytes / system.memory.totalBytes}
-      >
-        {usage(system.memory)}
-      </Detail>
-      {system.volumes.map((volume) => (
-        <Detail
-          key={volume.name}
-          label={`${volume.name} volume`}
-          meter={volume.usedBytes / volume.totalBytes}
-        >
-          {usage(volume)}
-        </Detail>
-      ))}
-      <Detail label="Processes">{system.processes}</Detail>
-      <Detail label="Packages">{system.packages}</Detail>
-      <Detail label="Kernel">{system.kernel}</Detail>
-    </DetailList>
+    <Panel title={title}>
+      <Suspense fallback={<PanelNote>Checking…</PanelNote>}>
+        <SystemReading {...reading} />
+      </Suspense>
+    </Panel>
   );
 }
 
@@ -192,33 +209,50 @@ export function Dashboard() {
       }
     >
       <div className="grid items-start gap-6 @2xl:grid-cols-2">
-        <Panel title="iPad">
-          <Suspense fallback={<PanelNote>Checking…</PanelNote>}>
-            <IpadDetails check={checks.ipad} />
-          </Suspense>
-        </Panel>
-        <div className="@2xl:col-start-2 @2xl:row-span-2 @2xl:row-start-1">
-          <Panel title="System">
+        <div className="grid min-w-0 gap-6">
+          <Panel title="iPad">
             <Suspense fallback={<PanelNote>Checking…</PanelNote>}>
-              <SystemDetails check={checks.system} />
+              <IpadDetails check={checks.ipad} />
             </Suspense>
           </Panel>
+          <Panel title="Status">
+            <StatusList>
+              <Suspense
+                fallback={<StatusRow label="Electron main" state="checking" />}
+              >
+                <MainProcessStatus version={checks.version} />
+              </Suspense>
+              <Suspense fallback={<StatusRow label="iPad" state="checking" />}>
+                <IpadStatus check={checks.ipad} />
+              </Suspense>
+              <Suspense fallback={<StatusRow label="SSH" state="checking" />}>
+                <SshStatus check={checks.system} />
+              </Suspense>
+            </StatusList>
+          </Panel>
+          <SystemPanel title="Software" check={checks.system}>
+            {(system) => <SoftwareDetails system={system} />}
+          </SystemPanel>
+          <SystemPanel title="Network" check={checks.system}>
+            {(system) => <NetworkDetails system={system} />}
+          </SystemPanel>
         </div>
-        <Panel title="Status">
-          <StatusList>
-            <Suspense
-              fallback={<StatusRow label="Electron main" state="checking" />}
-            >
-              <MainProcessStatus version={checks.version} />
-            </Suspense>
-            <Suspense fallback={<StatusRow label="iPad" state="checking" />}>
-              <IpadStatus check={checks.ipad} />
-            </Suspense>
-            <Suspense fallback={<StatusRow label="SSH" state="checking" />}>
-              <SshStatus check={checks.system} />
-            </Suspense>
-          </StatusList>
-        </Panel>
+        <div className="grid min-w-0 gap-6">
+          <SystemPanel title="System" check={checks.system} notes={systemNotes}>
+            {(system) => <SystemDetails system={system} />}
+          </SystemPanel>
+          <SystemPanel title="Top processes" check={checks.system}>
+            {(system) => <ProcessDetails system={system} />}
+          </SystemPanel>
+          <SystemPanel title="Battery" check={checks.system}>
+            {(system) => (
+              <BatteryDetails system={system} health={checks.batteryHealth} />
+            )}
+          </SystemPanel>
+          <SystemPanel title="Crash reports" check={checks.system}>
+            {(system) => <CrashReportDetails system={system} />}
+          </SystemPanel>
+        </div>
       </div>
     </Page>
   );

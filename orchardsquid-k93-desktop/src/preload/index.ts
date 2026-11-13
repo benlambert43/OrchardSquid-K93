@@ -23,6 +23,7 @@ const bridge: Bridge = {
   getAppVersion: invoke("getAppVersion"),
   findIpad: invoke("findIpad"),
   readIpadSystem: invoke("readIpadSystem"),
+  readIpadBatteryHealth: invoke("readIpadBatteryHealth"),
   exportSshBackup: invoke("exportSshBackup"),
   restoreSshBackup: invoke("restoreSshBackup"),
   openShell: invoke("openShell"),

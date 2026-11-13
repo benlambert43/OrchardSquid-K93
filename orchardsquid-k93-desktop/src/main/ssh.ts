@@ -13,6 +13,8 @@ const passwordAttempts = 3;
 const handshakeTimeoutMs = 10_000;
 const keepaliveIntervalMs = 15_000;
 const commandTimeoutMs = 10_000;
+const recordSeparator = "\x1e";
+const recordSeparatorEscape = String.raw`\036`;
 
 export class IpadUnpluggedError extends Error {
   constructor() {
@@ -111,7 +113,7 @@ export async function readHostKey(): Promise<Buffer | null> {
   });
 }
 
-export function run(client: Client, command: string): Promise<string> {
+export function runForBytes(client: Client, command: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       client.destroy();
@@ -131,7 +133,7 @@ export function run(client: Client, command: string): Promise<string> {
       channel.on("close", (code: number | null) => {
         clearTimeout(timer);
         if (code === 0) {
-          resolve(Buffer.concat(output).toString());
+          resolve(Buffer.concat(output));
         } else {
           reject(
             new Error(`The command on the iPad ended with ${String(code)}`),
@@ -140,4 +142,23 @@ export function run(client: Client, command: string): Promise<string> {
       });
     });
   });
+}
+
+export async function run(client: Client, command: string): Promise<string> {
+  return (await runForBytes(client, command)).toString();
+}
+
+export async function runEach<Name extends string>(
+  client: Client,
+  commands: Record<Name, string>,
+): Promise<Record<Name, string>> {
+  const names = Object.keys(commands) as Name[];
+  const script = names
+    .map((name) => `printf '${recordSeparatorEscape}'; ${commands[name]}`)
+    .concat("true")
+    .join("; ");
+  const outputs = (await run(client, script)).split(recordSeparator).slice(1);
+  return Object.fromEntries(
+    names.map((name, index) => [name, outputs[index] ?? ""]),
+  ) as Record<Name, string>;
 }

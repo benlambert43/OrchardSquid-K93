@@ -19,6 +19,31 @@ export function formatBytes(bytes: number): string {
   }).format(bytes / unitBytes);
 }
 
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat().format(value);
+}
+
+export function formatPercent(fraction: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(fraction);
+}
+
+export function formatBitRate(megabitsPerSecond: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "unit",
+    unit: "megabit-per-second",
+  }).format(megabitsPerSecond);
+}
+
+export function formatDateTime(time: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(time);
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / secondsPerMinute);
   return new Intl.DurationFormat(undefined, {

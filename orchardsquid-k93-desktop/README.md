@@ -25,7 +25,7 @@ ssh-keygen -t ed25519 -N "" -C "OrchardSquid-K93" -f ~/.ssh/orchardsquid-k93
 ssh-copy-id -i ~/.ssh/orchardsquid-k93.pub Bens-iPad
 ```
 
-Without the key, the Shell page asks for the password each time and the Dashboard's System panel stays empty.
+Without the key, the Shell page asks for the password each time and the Dashboard fills only its iPad and Status panels.
 
 On the Settings page, Export backup saves the key and these settings as a zip file, and Restore backup sets another computer up from that file instead of the password. By hand, the same restore is:
 

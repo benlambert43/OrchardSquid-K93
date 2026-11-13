@@ -13,14 +13,76 @@ export interface Usage {
   totalBytes: number;
 }
 
-export interface IpadSystem {
+export interface IpadProcess {
+  pid: number;
+  name: string;
+  memoryBytes: number;
+}
+
+export interface IpadStats {
   kernel: string;
   uptimeSeconds: number;
-  loadAverage: number;
+  loadAverages: number[];
   memory: Usage;
   volumes: (Usage & { name: string })[];
   processes: number;
+  topProcesses: IpadProcess[];
+}
+
+export interface IpadCpu {
+  userFraction: number;
+  systemFraction: number;
+}
+
+export interface IpadBattery {
+  level: number;
+  state: "full" | "charging" | "not-charging" | "discharging";
+}
+
+export interface IpadBatteryHealth {
+  cycleCount: number;
+  maxCapacityMah: number;
+  designCapacityMah: number;
+}
+
+export interface IpadWifi {
+  name: string;
+  channel: number;
+  signalDbm: number;
+  rateMbps: number;
+}
+
+export interface IpadNetwork {
+  address: string | null;
+  router: string | null;
+  dnsServers: string[];
+  wifi: IpadWifi | null;
+}
+
+export interface IpadSoftware {
+  carbon: string | null;
+  iocaste: boolean;
+  cydia: string | null;
+  openssh: string | null;
+  openssl: string | null;
+  safari: string | null;
+  webkit: string | null;
   packages: number;
+}
+
+export interface IpadCrashReports {
+  crashes: number;
+  latestCrash: { process: string | null; time: number } | null;
+  memoryEvents: number;
+  latestMemoryEvent: number | null;
+}
+
+export interface IpadSystem extends IpadStats {
+  cpu: IpadCpu;
+  battery: IpadBattery | null;
+  network: IpadNetwork | null;
+  software: IpadSoftware | null;
+  crashReports: IpadCrashReports | null;
 }
 
 export type IpadSystemReport =
@@ -57,6 +119,7 @@ export interface Requests {
   getAppVersion: () => Promise<string>;
   findIpad: () => Promise<Ipad | null>;
   readIpadSystem: () => Promise<IpadSystemReport>;
+  readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   exportSshBackup: () => Promise<SshBackupResult>;
   restoreSshBackup: () => Promise<SshRestoreResult>;
   openShell: (size: TerminalSize) => Promise<void>;

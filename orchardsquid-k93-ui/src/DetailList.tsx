@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
 
 const fullMeterFraction = 0.9;
+const emptyMeterFraction = 0.2;
+
+type MeterAlert = "full" | "empty";
+
+function isAlert(meter: number, alertWhen: MeterAlert): boolean {
+  return alertWhen === "full"
+    ? meter >= fullMeterFraction
+    : meter <= emptyMeterFraction;
+}
 
 export function DetailList({ children }: { children: ReactNode }) {
   return (
@@ -10,13 +19,23 @@ export function DetailList({ children }: { children: ReactNode }) {
   );
 }
 
+export function DetailNote({ children }: { children: ReactNode }) {
+  return (
+    <span className="block text-xs font-normal text-zinc-600 dark:text-zinc-400">
+      {children}
+    </span>
+  );
+}
+
 export function Detail({
   label,
   meter,
+  alertWhen = "full",
   children,
 }: {
   label: string;
   meter?: number;
+  alertWhen?: MeterAlert;
   children: ReactNode;
 }) {
   return (
@@ -39,7 +58,7 @@ export function Detail({
         >
           <div
             className={`h-full rounded-full ${
-              meter >= fullMeterFraction ? "bg-red-500" : "bg-emerald-500"
+              isAlert(meter, alertWhen) ? "bg-red-500" : "bg-emerald-500"
             }`}
             style={{ width: `${String(meter * 100)}%` }}
           />
