@@ -44,6 +44,7 @@ const bridge: Bridge = {
   readDevelopmentProject: invoke("readDevelopmentProject"),
   createDevelopmentProject: invoke("createDevelopmentProject"),
   openDevelopmentProject: invoke("openDevelopmentProject"),
+  editDevelopmentProject: invoke("editDevelopmentProject"),
   buildDevelopmentProject: invoke("buildDevelopmentProject"),
   cleanUpIpad: invoke("cleanUpIpad"),
   installZebraOnIpad: invoke("installZebraOnIpad"),

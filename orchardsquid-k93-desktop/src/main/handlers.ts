@@ -26,6 +26,7 @@ import { installIpadPackage } from "@/main/development/package.ts";
 import {
   buildDevelopmentProject,
   createDevelopmentProject,
+  editDevelopmentProject,
   openDevelopmentProject,
   readDevelopmentProject,
 } from "@/main/development/project.ts";
@@ -142,6 +143,7 @@ export const handlers: Handlers = {
       packageIdSchema.parse(packageId),
     ),
   openDevelopmentProject,
+  editDevelopmentProject,
   buildDevelopmentProject: (options) =>
     buildDevelopmentProject(
       buildOptionsSchema.parse(options),

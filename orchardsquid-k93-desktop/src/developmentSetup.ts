@@ -34,6 +34,11 @@ export const projectNamePattern = "[A-Za-z0-9][A-Za-z0-9+.\\-]*";
 
 export const packageIdPattern = "[a-z0-9][a-z0-9+.\\-]+";
 
+export const projectEditor = {
+  name: "VS Code",
+  bundleId: "com.microsoft.VSCode",
+} as const;
+
 export const buildOptions = ["install"] as const;
 
 export type BuildOption = (typeof buildOptions)[number];

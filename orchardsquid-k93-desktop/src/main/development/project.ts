@@ -7,12 +7,14 @@ import type {
   DevelopmentProject,
   ProjectBuild,
   ProjectCreate,
+  ProjectEdit,
   ProjectOpen,
   ProjectReading,
 } from "@/bridge.ts";
 import {
   type BuildOption,
   developmentTarget,
+  projectEditor,
   type ProjectTemplate,
   projectTemplates,
 } from "@/developmentSetup.ts";
@@ -28,6 +30,7 @@ import { readSetting, writeSetting } from "@/main/settings.ts";
 import { readText } from "@/main/sshFiles.ts";
 import { installPackageOnIpad } from "@/main/system.ts";
 
+const openFile = "/usr/bin/open";
 const perlFile = "/usr/bin/perl";
 const makeFile = "/usr/bin/make";
 const projectSetting = "developmentProject";
@@ -37,6 +40,7 @@ const packageFolder = "packages";
 const packageExtension = ".deb";
 const createTimeoutMs = 60 * 1000;
 const buildTimeoutMs = 10 * 60 * 1000;
+const editorTimeoutMs = 30 * 1000;
 
 const { sdkVersion, minimumVersion, architecture } = developmentTarget;
 const target = `iphone:clang:${sdkVersion}:${minimumVersion}`;
@@ -190,6 +194,19 @@ export async function openDevelopmentProject(): Promise<ProjectOpen> {
   }
   writeSetting(projectSetting, folder);
   return { state: "opened", folder: shortenHome(folder) };
+}
+
+export async function editDevelopmentProject(): Promise<ProjectEdit> {
+  const folder = readSetting(projectSetting);
+  if (folder === null || (await readProject(folder)) === null) {
+    return { state: "no-project" };
+  }
+  const { code } = await runProcess(
+    openFile,
+    ["-b", projectEditor.bundleId, folder],
+    { quietTimeoutMs: editorTimeoutMs },
+  );
+  return code === 0 ? { state: "opened" } : { state: "no-editor" };
 }
 
 export async function buildDevelopmentProject(

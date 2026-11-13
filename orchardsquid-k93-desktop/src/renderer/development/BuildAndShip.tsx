@@ -1,16 +1,18 @@
-import { DetailNote, Panel, PanelNote } from "@orchardsquid-k93/ui";
+import { Button, DetailNote, Panel, PanelNote } from "@orchardsquid-k93/ui";
 import { type ReactNode, Suspense, use, useActionState, useId } from "react";
 
 import type {
   PackageInstallReport,
   ProjectBuild,
   ProjectCreate,
+  ProjectEdit,
   ProjectOpen,
   ProjectReading,
 } from "@/bridge.ts";
 import {
   developmentTarget,
   packageIdPattern,
+  projectEditor,
   projectNamePattern,
   type ProjectTemplate,
   projectTemplates,
@@ -64,6 +66,7 @@ type Request =
       packageId: string;
     }
   | { action: "open" }
+  | { action: "edit" }
   | { action: "build"; install: boolean }
   | { action: "package" };
 
@@ -74,6 +77,7 @@ interface Failed {
 type Outcome =
   | { action: "create"; report: ProjectCreate | Failed }
   | { action: "open"; report: ProjectOpen | Failed }
+  | { action: "edit"; report: ProjectEdit | Failed }
   | { action: "build"; report: ProjectBuild | Failed }
   | { action: "package"; report: PackageInstallReport | Failed }
   | null;
@@ -101,6 +105,11 @@ async function perform(
       }
       return { action: "open", report };
     }
+    case "edit":
+      return {
+        action: "edit",
+        report: await window.bridge.editDevelopmentProject(),
+      };
     case "build": {
       const report = await followDevelopment(
         () =>
@@ -225,6 +234,16 @@ function Result({ outcome }: { outcome: Outcome }) {
           includes Theos.
         </Problem>
       ) : null;
+    }
+    case "edit": {
+      const { report } = outcome;
+      return report.state === "opened" ? null : (
+        <Problem>
+          {report.state === "no-editor"
+            ? `${projectEditor.name} was not found on this Mac.`
+            : "There is no project to open. Create or open one first."}
+        </Problem>
+      );
     }
     case "build": {
       const { report } = outcome;
@@ -501,6 +520,15 @@ function Actions({
       />
       <li className="flex flex-col items-start gap-2 py-2.5">
         <div className="flex flex-wrap gap-2">
+          <form
+            action={() => {
+              run({ action: "edit" });
+            }}
+          >
+            <Button type="submit" disabled={busy || reading?.state !== "open"}>
+              Open in {projectEditor.name}
+            </Button>
+          </form>
           <ConfirmButton
             label="New project…"
             title="New project"

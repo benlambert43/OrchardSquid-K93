@@ -307,6 +307,9 @@ export type ProjectOpen =
   | { state: "cancelled" }
   | { state: "invalid"; folder: string };
 
+export type ProjectEdit =
+  { state: "opened" } | { state: "no-project" } | { state: "no-editor" };
+
 export type ProjectBuild =
   | { state: "built"; file: string; install: PackageInstallReport | null }
   | { state: "busy" }
@@ -427,6 +430,7 @@ export interface Requests {
     packageId: string,
   ) => Promise<ProjectCreate>;
   openDevelopmentProject: () => Promise<ProjectOpen>;
+  editDevelopmentProject: () => Promise<ProjectEdit>;
   buildDevelopmentProject: (options: BuildOption[]) => Promise<ProjectBuild>;
   cleanUpIpad: (options: CleanUpOption[]) => Promise<IpadCleanUpReport>;
   installZebraOnIpad: () => Promise<ZebraInstallReport>;
