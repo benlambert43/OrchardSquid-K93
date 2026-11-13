@@ -10,7 +10,7 @@ So far the apps show a status list: the API, the database, and, in the desktop a
 | `orchardsquid-k93-server`  | Express API on Node.js, with Drizzle ORM and PostgreSQL                        |
 | `orchardsquid-k93-shared`  | Zod schemas, types, and the API client, imported as `@orchardsquid-k93/shared` |
 | `orchardsquid-k93-ui`      | React components and the Tailwind theme, imported as `@orchardsquid-k93/ui`    |
-| `orchardsquid-k93-desktop` | Electron desktop app, built from the same components as the web app            |
+| `orchardsquid-k93-desktop` | Electron desktop app: a dashboard and a shell for the iPad                     |
 
 ## Getting started
 
@@ -171,7 +171,7 @@ The status list is the path from the API to the components that every new featur
 - **Props only.** Components take their data and their actions as props. They never fetch, read the environment, or import a framework, and ESLint refuses `next` and `node:` imports in the package.
 - **Logic sits beside the schemas.** In `orchardsquid-k93-shared`, logic that both apps need, such as parsing a form and calling the API, returns failures as values, and `createApiClient` builds the client that each app gives its API address. The package runs in Node.js and in browser windows alike, so ESLint refuses browser-only globals there.
 - **The web app supplies data from the server.** `app/_components/StatusChecks.tsx` loads the API's health in a server component and hands it to the shared components. Changes from a form go through server actions, which refresh the page afterwards.
-- **The desktop app supplies data from the window.** `orchardsquid-k93-desktop/src/renderer/StatusChecks.tsx` calls the API directly, and asks the main process over the bridge for what only it can reach, such as the iPad.
+- **The desktop app supplies data from the window.** `orchardsquid-k93-desktop/src/renderer/Dashboard.tsx` calls the API directly, and asks the main process over the bridge for what only it can reach, such as the iPad.
 - **`"use client"` where needed.** Components with state or event handlers start with it, which lets the App Router render them from server components. The others have no directive, so they can render on the server as well.
 - **One theme.** `src/theme.css` is the one place for colors and fonts, and it tells Tailwind to scan the package for class names. Each app's `globals.css` imports it after `tailwindcss` and provides the fonts behind `--font-geist-sans` and `--font-geist-mono` in its own way.
 - **No build step.** The apps compile the package from source, as they do `@orchardsquid-k93/shared`, so an edit hot-reloads in every app that is running.
@@ -206,7 +206,7 @@ SITE_URL=https://example.com npm run build
 - **The editor agrees with preflight.** A passing `npm run preflight` should leave nothing underlined in VS Code. ESLint fails on deprecated APIs and lints Tailwind classes with `eslint-plugin-better-tailwindcss`, which makes the same checks as the Tailwind CSS IntelliSense extension, so `.vscode/settings.json` turns those three IntelliSense lints off. Prettier wraps long class lists, so the plugin's line-wrapping rule is the one rule switched off.
 - **ShellCheck reads `.shellcheckrc`**, so a script checked on its own in the editor follows `scripts/lib.sh` just as `lint:shell` does.
 - **`overrides` in `package.json`.** One entry points every `eslint` peer dependency at the root ESLint 10, because some plugins bundled with `eslint-config-next` still declare ESLint 9. The other lets `@esbuild-kit/core-utils`, a deprecated package that `drizzle-kit` lists but never loads, share the esbuild already installed instead of adding an old release with a known advisory.
-- **`allowScripts` in `package.json`** is npm's install-script policy and names the packages whose install scripts may run. When `npm install` reports an unreviewed package, look at what its script does and approve it. `prune` drops the entries that an update has made unnecessary.
+- **`allowScripts` in `package.json`** is npm's install-script policy and names the packages whose install scripts may run. When `npm install` reports an unreviewed package, look at what its script does and approve it. `prune` drops the entries that an update has made unnecessary. An entry set to `false` is a script that was looked at and turned down: `ssh2` and `cpu-features` only compile optional add-ons that the desktop app does not load.
 
   ```sh
   npm install-scripts approve <package>
@@ -221,18 +221,18 @@ SITE_URL=https://example.com npm run build
 
 ## Desktop app
 
-`orchardsquid-k93-desktop` is an Electron app that shows the same page as the web app, built from the same components. Its window is a React app compiled by Vite that calls the API directly: the server that sits between the web app and the API is there for caching and search engines, which a desktop app has no use for. The main process owns the window and its security rules, and answers the window over a small typed bridge.
+`orchardsquid-k93-desktop` is an Electron app for looking after the iPad. It has two pages: the Dashboard, which shows what the iPad reports about itself, and the Shell, a terminal on the iPad. Both are built from the shared components. Its window is a React app compiled by Vite that calls the API directly: the server that sits between the web app and the API is there for caching and search engines, which a desktop app has no use for. The main process owns the window, its security rules, and every connection to the iPad, and talks to the window over a small typed bridge.
 
 ```text
 window (React, sandboxed) → API
-window → window.bridge → preload script → IPC → main process
+window ⇄ window.bridge ⇄ preload script ⇄ IPC ⇄ main process
 main process → usbmuxd → USB → iPad
 ```
 
 ### Commands
 
 ```sh
-npm run dev:server      # the window shows data only while the API runs
+npm run dev:server      # the Dashboard's API and Database rows need it
 npm run dev:desktop     # starts the app; press r in this terminal to restart the main process
 npm run test:desktop    # runs its tests alone
 npm run build:desktop   # packages an unsigned app for this machine
@@ -251,33 +251,44 @@ VITE_API_BASE_URL=https://api.example.com npm run make:desktop   # a release tha
 
 Paths are inside `orchardsquid-k93-desktop`.
 
-| File                            | What it holds                                                                                                                    |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `src/renderer/api.ts`           | The shared API client, pointed at `VITE_API_BASE_URL`                                                                            |
-| `src/renderer/StatusChecks.tsx` | Loads the data and hands it to the shared components                                                                             |
-| `src/env.ts`                    | The environment, parsed with Zod when the app starts                                                                             |
-| `src/bridge.ts`                 | The `Bridge` interface, which lists every call the window can make to the main process; the two files below are typed against it |
-| `src/preload/index.ts`          | Exposes one function per `Bridge` method as `window.bridge`, and nothing else                                                    |
-| `src/main/handlers.ts`          | Implements each method                                                                                                           |
-| `src/main/usbmux.ts`            | Talks to `usbmuxd`: finds a device attached by USB and opens a connection to a TCP port on it                                    |
-| `src/main/ipad.ts`              | Finds the iPad 2 and asks it for its name, model, and iOS version                                                                |
-| `src/main/index.ts`             | The window, and the security rules listed below                                                                                  |
-| `forge.config.ts`               | Electron Forge: packaging, the Vite builds, and the fuses                                                                        |
+| File                         | What it holds                                                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/renderer/App.tsx`       | The sidebar and the page beside it, which `src/renderer/navigation.ts` picks from the part of the address after `#`                                                                          |
+| `src/renderer/Dashboard.tsx` | The Dashboard page: loads the checks and hands them to the shared components                                                                                                                 |
+| `src/renderer/Shell.tsx`     | The Shell page: an [xterm.js](https://xtermjs.org) terminal joined to the shell session in the main process                                                                                  |
+| `src/renderer/format.ts`     | Writes sizes and durations the way the Dashboard shows them                                                                                                                                  |
+| `src/renderer/api.ts`        | The shared API client, pointed at `VITE_API_BASE_URL`                                                                                                                                        |
+| `src/env.ts`                 | The environment, parsed with Zod when the app starts                                                                                                                                         |
+| `src/bridge.ts`              | The `Bridge` type: `Requests` lists every call the window can make to the main process, and `Events` everything the main process sends to the window; the files below are typed against both |
+| `src/preload/index.ts`       | Exposes one function per request and one `on…` subscription per event as `window.bridge`, and nothing else                                                                                   |
+| `src/main/handlers.ts`       | Implements each request, and checks its arguments with Zod first                                                                                                                             |
+| `src/main/events.ts`         | Sends an event to the window                                                                                                                                                                 |
+| `src/main/usbmux.ts`         | Talks to `usbmuxd`: finds a device attached by USB and opens a connection to a TCP port on it                                                                                                |
+| `src/main/ipad.ts`           | Finds the iPad 2, asks it for its name, model, and iOS version, and opens a port on it for the files below                                                                                   |
+| `src/main/ssh.ts`            | Connects to the iPad's SSH server and signs in                                                                                                                                               |
+| `src/main/system.ts`         | Reads the iPad's uptime, load, memory, and storage over SSH                                                                                                                                  |
+| `src/main/shell.ts`          | Holds the shell session that the Shell page shows                                                                                                                                            |
+| `src/main/index.ts`          | The window, and the security rules listed below                                                                                                                                              |
+| `forge.config.ts`            | Electron Forge: packaging, the Vite builds, and the fuses                                                                                                                                    |
 
-The bridge is for what only the main process can do, such as reporting the app version and reaching the iPad. To add a call, add it to `Bridge`. TypeScript then fails until the preload script exposes it and `handlers.ts` implements it.
+The bridge is for what only the main process can do, such as reporting the app version and reaching the iPad. To add a call, add it to `Requests`. TypeScript then fails until the preload script exposes it and `handlers.ts` implements it. To send something the other way, add it to `Events`, expose its subscription in the preload script, and call `send` in the main process.
 
 ### iPad
 
-The status list has an iPad row, which the main process fills in over USB. Nothing has to be installed on the iPad, and it does not have to trust the computer first.
+The app reaches the iPad through its USB cable and nothing else, so Wi-Fi and the iPad's address play no part. The Dashboard's iPad panel needs nothing installed on the iPad, and the iPad does not have to trust the computer first. The System panel and the Shell page need an SSH server on the iPad, which is OpenSSH from Cydia.
 
 ```text
 main process → /var/run/usbmuxd → USB → lockdownd on the iPad, port 62078
+main process → /var/run/usbmuxd → USB → sshd on the iPad, port 22
 ```
 
-- **`usbmuxd`** is the service macOS runs to carry TCP connections to a device over its USB cable. `src/main/usbmux.ts` asks it which devices are attached and for a connection to a port on one of them. Any port the iPad listens on is reached the same way, which is how a shell will get there once the iPad runs an SSH server.
+- **`usbmuxd`** is the service macOS runs to carry TCP connections to a device over its USB cable. `src/main/usbmux.ts` asks it which devices are attached and for a connection to a port on one of them. Any port the iPad listens on is reached the same way.
 - **The iPad 2** is told apart by its USB product ID, `0x129f`, which belongs to the Wi-Fi model: iPad2,1, or K93. Every other device is ignored.
-- **`lockdownd`** is the service on the iPad that answers a computer before the two are paired. `src/main/ipad.ts` sends it a `GetValue` request, and the row shows the name, model, and iOS version that come back.
-- **The check runs once**, when the window loads. Reload the window from the View menu after plugging the iPad in.
+- **`lockdownd`** is the service on the iPad that answers a computer before the two are paired. `src/main/ipad.ts` sends it a `GetValue` request, and the Dashboard shows the name, model, and iOS version that come back.
+- **SSH** runs over the same cable. `src/main/ssh.ts` hands the connection from `usbmuxd` to [ssh2](https://github.com/mscdex/ssh2) and signs in as `root` with the key in `~/.ssh/orchardsquid-k93`. `orchardsquid-k93-desktop/README.md` has the two commands that create the key and add it to the iPad. Where the iPad refuses the key, the Shell page asks for the password, up to three times, and the System panel says that the key is missing. The password is passed on to the iPad and never stored.
+- **The host key is not checked.** The connection never leaves the cable, so there is no network on which something else could answer as the iPad.
+- **The System panel** comes from one command run over SSH, which `src/main/system.ts` parses. It uses `sysctl`, `vm_stat`, `df`, `ps`, and `dpkg-query`, all of which a freshly jailbroken iPad 2 had. Refresh asks the iPad again.
+- **The shell session** lives in the main process, so it outlasts a change of page and a reload of the window. `src/main/shell.ts` keeps the last megabyte of output and replays it when the Shell page comes back. Typing `exit` ends the session, and New session starts another.
 
 ### Configuration
 
@@ -288,7 +299,8 @@ main process → /var/run/usbmuxd → USB → lockdownd on the iPad, port 62078
 ### Development
 
 - **Forge and Vite.** Electron Forge runs development, packaging, and distribution, and its Vite plugin bundles from `vite.main.config.ts`, `vite.preload.config.ts`, and `vite.renderer.config.ts`. Forge emits the first two as CommonJS, because a sandboxed preload script cannot load ES modules.
-- **Reloading.** The window hot-reloads, including after an edit to `orchardsquid-k93-shared` or `orchardsquid-k93-ui`, and a change to the preload script reloads it. A change to the main process is rebuilt at once but takes effect when the app restarts: press `r` in the terminal that runs `npm run dev:desktop`, or type `rs` and Enter where that terminal is not interactive. Forge's `hotRestart` option is meant to do this by itself but does not restart the app as of Forge 8.0.1; turn it on in `forge.config.ts` once it does.
+- **Reloading.** The window hot-reloads, including after an edit to `orchardsquid-k93-shared` or `orchardsquid-k93-ui`, and a change to the preload script reloads it. Edits to those two packages reach the window because `vite.renderer.config.ts` sets `resolve.preserveSymlinks` to `false`: Forge's Vite plugin turns it on, and Vite then takes both packages for dependencies in `node_modules`, bundles them once, and stops looking at their sources. A change to the main process is rebuilt at once but takes effect when the app restarts: press `r` in the terminal that runs `npm run dev:desktop`, or type `rs` and Enter where that terminal is not interactive. Forge's `hotRestart` option is meant to do this by itself but does not restart the app as of Forge 8.0.1; turn it on in `forge.config.ts` once it does.
+- **No native add-ons.** ssh2 can use two optional ones, its own and `cpu-features`, and runs without either. Neither is built: their install scripts are denied in `allowScripts`, `forge.config.ts` tells Forge not to rebuild `cpu-features` for Electron, and `vite.main.config.ts` leaves it out of the bundle, where ssh2's attempt to load it fails quietly.
 - **Port 5173.** The dev server is fixed to it, because that address is on the API's list.
 - **Imports** inside the app start from `src` with `@/`, as they start from the app folder in the web app. Stack traces from the main process point at the TypeScript source.
 - **One copy runs.** A second launch brings the first one's window forward. The app started by `npm run dev:desktop` keeps its own data folder, with `(development)` after the name, so it runs beside an installed copy.
@@ -302,7 +314,8 @@ main process → /var/run/usbmuxd → USB → lockdownd on the iPad, port 62078
 - **The window has no access to Node.js or Electron.** Every renderer is sandboxed and context-isolated, and the preload script exposes named functions instead of `ipcRenderer`. The main process accepts calls only from the app's own page.
 - **Lint and types draw the same line.** ESLint keeps `electron`, `node:` modules, Node.js globals, and the main process's own files out of `src/renderer`. `src/renderer/tsconfig.json` checks the window's code without the Node.js types, and `tsconfig.json` checks everything else without the DOM types.
 - **A packaged app loads its window from `app://renderer`**, a protocol the main process serves from the app's own files, since `file://` pages have no origin to build rules on.
-- **Content-Security-Policy.** The page may load its own files, connect to the API's address, and show `data:` images, with no plugins, `<base>` element, or form posts, and with inline scripts and styles allowed only for Vite's dev server. `src/contentSecurityPolicy.ts` builds the policy, Vite's dev server sends it in development, and the `app://` handler sends it with every file of a packaged app.
+- **Content-Security-Policy.** The page may load its own files, connect to the API's address, and show `data:` images, with no plugins, `<base>` element, or form posts. Inline scripts are allowed only for Vite's dev server. Inline styles are allowed everywhere, because xterm.js writes `<style>` elements and `style` attributes as it draws the terminal, and the Shell page is unreadable without them. `src/contentSecurityPolicy.ts` builds the policy, Vite's dev server sends it in development, and the `app://` handler sends it with every file of a packaged app.
+- **The shell is `root` on the iPad.** Whatever runs in the window can type into it, which is one more reason the window loads nothing but the app's own files. The main process checks the shape of every argument the window sends before it acts on it.
 - **Navigation.** Leaving the app and opening new windows are refused, and `https` addresses, whether from a link or `window.open`, open in the default browser.
 - **Permissions** are refused, both when the page asks for one and when Chromium only checks it, except writing to the clipboard and going fullscreen. Add to `grantedPermissions` in `src/main/index.ts` as the app needs more.
 - **Zod without `eval`.** `src/renderer/zod.ts` runs first and switches Zod to interpreting its schemas, because the compiled parsers it prefers need `eval`, which the policy forbids. The main process has no such policy and keeps the compiled parsers.

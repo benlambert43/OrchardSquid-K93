@@ -27,38 +27,51 @@ const deviceListSchema = z.object({
 
 const resultSchema = z.object({ Number: z.number() });
 
-export interface Connection {
-  socket: net.Socket;
-  read: (size: number) => Promise<Buffer>;
+export function readExactly(socket: net.Socket, size: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    function stop() {
+      clearTimeout(timer);
+      socket.off("readable", onReadable);
+      socket.off("close", onClose);
+      socket.off("error", onError);
+    }
+    function onReadable() {
+      const bytes = socket.read(size) as Buffer | null;
+      if (bytes?.length === size) {
+        stop();
+        resolve(bytes);
+      }
+    }
+    function onClose() {
+      stop();
+      reject(new Error("The USB connection closed before the reply ended"));
+    }
+    function onError(error: Error) {
+      stop();
+      reject(error);
+    }
+    const timer = setTimeout(() => {
+      socket.destroy(new Error("Timed out waiting for a reply over USB"));
+    }, timeoutMs);
+    socket.on("readable", onReadable);
+    socket.on("close", onClose);
+    socket.on("error", onError);
+    if (socket.destroyed) {
+      onClose();
+    } else {
+      onReadable();
+    }
+  });
 }
 
-async function connect(): Promise<Connection> {
+async function connect(): Promise<net.Socket> {
   const socket = net.createConnection(socketPath);
-  socket.setTimeout(timeoutMs, () => {
-    socket.destroy(new Error("Timed out waiting for a reply over USB"));
-  });
   await once(socket, "connect");
-  const chunks = socket[Symbol.asyncIterator]();
-  let buffered = Buffer.alloc(0);
-  return {
-    socket,
-    async read(size) {
-      while (buffered.length < size) {
-        const chunk = await chunks.next();
-        if (chunk.done) {
-          throw new Error("The USB connection closed before the reply ended");
-        }
-        buffered = Buffer.concat([buffered, chunk.value as Buffer]);
-      }
-      const bytes = buffered.subarray(0, size);
-      buffered = buffered.subarray(size);
-      return bytes;
-    },
-  };
+  return socket;
 }
 
 async function request(
-  { socket, read }: Connection,
+  socket: net.Socket,
   message: Record<string, PlistValue>,
 ): Promise<PlistValue> {
   const payload = Buffer.from(
@@ -75,8 +88,8 @@ async function request(
   header.writeUInt32LE(plistMessageType, 8);
   header.writeUInt32LE(tag, 12);
   socket.write(Buffer.concat([header, payload]));
-  const replySize = (await read(headerSize)).readUInt32LE(0);
-  return parse((await read(replySize - headerSize)).toString());
+  const replySize = (await readExactly(socket, headerSize)).readUInt32LE(0);
+  return parse((await readExactly(socket, replySize - headerSize)).toString());
 }
 
 function toNetworkByteOrder(port: number): number {
@@ -86,10 +99,10 @@ function toNetworkByteOrder(port: number): number {
 export async function findUsbDevice(
   productId: number,
 ): Promise<number | undefined> {
-  const connection = await connect();
+  const socket = await connect();
   try {
     const { DeviceList } = deviceListSchema.parse(
-      await request(connection, { MessageType: "ListDevices" }),
+      await request(socket, { MessageType: "ListDevices" }),
     );
     return DeviceList.find(
       ({ Properties }) =>
@@ -97,18 +110,18 @@ export async function findUsbDevice(
         Properties.ProductID === productId,
     )?.DeviceID;
   } finally {
-    connection.socket.destroy();
+    socket.destroy();
   }
 }
 
 export async function openPort(
   deviceId: number,
   port: number,
-): Promise<Connection> {
-  const connection = await connect();
+): Promise<net.Socket> {
+  const socket = await connect();
   try {
     const result = resultSchema.parse(
-      await request(connection, {
+      await request(socket, {
         MessageType: "Connect",
         DeviceID: deviceId,
         PortNumber: toNetworkByteOrder(port),
@@ -119,9 +132,9 @@ export async function openPort(
         `usbmuxd refused port ${String(port)} with result ${String(result.Number)}`,
       );
     }
-    return connection;
+    return socket;
   } catch (error) {
-    connection.socket.destroy();
+    socket.destroy();
     throw error;
   }
 }

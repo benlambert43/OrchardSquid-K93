@@ -80,6 +80,8 @@
   },
   "allowScripts": {
     "fsevents": true,
-    "esbuild": true
+    "esbuild": true,
+    "ssh2": false,
+    "cpu-features": false
   }
 }

@@ -4,6 +4,7 @@ export function contentSecurityPolicy(
 ): string {
   return [
     `default-src 'self'${devServer ? " 'unsafe-inline'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${new URL(apiBaseUrl).origin}`,
     "img-src 'self' data:",
     "object-src 'none'",
