@@ -10,7 +10,7 @@ export function App() {
   return (
     <AppFrame
       title="OrchardSquid-K93"
-      description="All-in-one admin tool for an iPad 2"
+      description="All-in-one admin tool for K93 devices"
       navigation={[
         {
           href: pageLinks.dashboard,

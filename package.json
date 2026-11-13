@@ -1,7 +1,7 @@
 {
   "name": "orchardsquid-k93",
   "version": "0.1.0",
-  "description": "All-in-one admin tool for an iPad 2",
+  "description": "All-in-one admin tool for K93 devices",
   "private": true,
   "type": "module",
   "engines": {
