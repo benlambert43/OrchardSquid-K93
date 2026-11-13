@@ -1,15 +1,22 @@
 import { Panel, PanelNote } from "@orchardsquid-k93/ui";
 import { type ReactNode, Suspense, use } from "react";
 
+import type { Unreachable } from "@/bridge.ts";
+import { UnreachableNote } from "@/renderer/UnreachableNote.tsx";
+
 export type Unreached =
-  { state: "unplugged" } | { state: "signed-out" } | { state: "failed" };
+  Unreachable | { state: "signed-out" } | { state: "failed" };
 
 export type Check<Reading> = { state: "ok"; reading: Reading } | Unreached;
 
-const explanations: Record<Unreached["state"], string> = {
-  unplugged: "Connect the iPad 2 with its USB cable.",
-  "signed-out":
-    "The iPad does not accept this computer's SSH key yet. The README explains how to add it.",
+export const signedOutExplanation =
+  "The iPad does not accept this computer's SSH key yet. The README explains how to add it.";
+
+const explanations: Record<
+  Exclude<Unreached["state"], "unreachable">,
+  string
+> = {
+  "signed-out": signedOutExplanation,
   failed: "The iPad did not answer over SSH.",
 };
 
@@ -33,10 +40,13 @@ function Report<Reading>({
   if (loaded.state === "ok") {
     return children(loaded.reading);
   }
-  return explains ? (
-    <PanelNote>{explanations[loaded.state]}</PanelNote>
+  if (!explains) {
+    return <Unavailable />;
+  }
+  return loaded.state === "unreachable" ? (
+    <UnreachableNote connection={loaded.connection} />
   ) : (
-    <Unavailable />
+    <PanelNote>{explanations[loaded.state]}</PanelNote>
   );
 }
 

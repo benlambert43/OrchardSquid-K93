@@ -4,9 +4,26 @@ export interface Ipad {
   hardwareModel: string;
   productVersion: string;
   buildVersion: string;
-  wifiAddress: string;
-  udid: string;
+  wifiAddress: string | null;
+  udid: string | null;
 }
+
+export type Transport = "wifi" | "usb";
+
+export type Connection =
+  { transport: "usb" } | { transport: "wifi"; address: string | null };
+
+export interface Unreachable {
+  state: "unreachable";
+  connection: Connection;
+}
+
+export type IpadReport =
+  | { state: "ok"; ipad: Ipad; connection: Connection }
+  | { state: "signed-out" }
+  | Unreachable;
+
+export type WifiCheck = "connected" | "signed-out" | "unreachable" | "failed";
 
 export interface Usage {
   usedBytes: number;
@@ -94,14 +111,12 @@ export interface IpadSystem extends IpadStats {
 }
 
 export type IpadSystemReport =
-  | { state: "ok"; system: IpadSystem }
-  | { state: "signed-out" }
-  | { state: "unplugged" };
+  { state: "ok"; system: IpadSystem } | { state: "signed-out" } | Unreachable;
 
 export type IpadSoftwareReport =
   | { state: "ok"; software: IpadSoftware }
   | { state: "signed-out" }
-  | { state: "unplugged" };
+  | Unreachable;
 
 export type SshBackupResult =
   | { state: "saved"; path: string; ipadIncluded: boolean }
@@ -125,12 +140,16 @@ export interface TerminalSize {
 export type ShellStatus =
   | { state: "connecting" }
   | { state: "password"; retry: boolean }
-  | { state: "open" }
+  | { state: "open"; transport: Transport }
   | { state: "closed"; reason: string };
 
 export interface Requests {
   getAppVersion: () => Promise<string>;
-  findIpad: () => Promise<Ipad | null>;
+  readConnection: () => Promise<Connection>;
+  chooseTransport: (transport: Transport) => Promise<void>;
+  readWifiAddress: () => Promise<string | null>;
+  setWifiAddress: (address: string) => Promise<WifiCheck>;
+  findIpad: () => Promise<IpadReport>;
   readIpadSystem: () => Promise<IpadSystemReport>;
   readIpadBatteryHealth: () => Promise<IpadBatteryHealth | null>;
   readIpadSoftware: () => Promise<IpadSoftwareReport>;

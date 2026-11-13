@@ -21,6 +21,10 @@ function subscribe<Event extends keyof Events>(event: Event) {
 
 const bridge: Bridge = {
   getAppVersion: invoke("getAppVersion"),
+  readConnection: invoke("readConnection"),
+  chooseTransport: invoke("chooseTransport"),
+  readWifiAddress: invoke("readWifiAddress"),
+  setWifiAddress: invoke("setWifiAddress"),
   findIpad: invoke("findIpad"),
   readIpadSystem: invoke("readIpadSystem"),
   readIpadBatteryHealth: invoke("readIpadBatteryHealth"),

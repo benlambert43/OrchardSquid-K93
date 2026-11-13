@@ -14,7 +14,8 @@ import {
   knownHostSchema,
   type PublicKey,
 } from "@/main/backupFormat.ts";
-import { findIpad, k93UsbProductId } from "@/main/ipad.ts";
+import { k93UsbProductId } from "@/main/connection.ts";
+import { findIpad } from "@/main/system.ts";
 import { keyPath, readHostKey, sshPort, username } from "@/main/ssh.ts";
 import {
   configPath,
@@ -102,7 +103,8 @@ export async function createSshBackup(
   const publicKey =
     (await readText(publicKeyPath)) ?? derivePublicKey(privateKey);
   const keyDetails = describePublicKey(publicKey);
-  const ipad = await findIpad().catch(() => null);
+  const found = await findIpad().catch(() => null);
+  const ipad = found?.state === "ok" ? found.ipad : null;
   const hostKeyBlob = ipad ? await readHostKey().catch(() => null) : null;
   const hostKey = hostKeyBlob && describeHostKey(hostKeyBlob);
   const knownHosts = hostKey

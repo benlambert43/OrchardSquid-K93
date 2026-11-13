@@ -3,7 +3,13 @@ import { z } from "zod";
 
 import type { Requests } from "@/bridge.ts";
 import { exportSshBackup, restoreSshBackup } from "@/main/backupDialogs.ts";
-import { findIpad } from "@/main/ipad.ts";
+import {
+  chooseTransport,
+  readConnection,
+  readWifiAddress,
+  transportSchema,
+  wifiAddressSchema,
+} from "@/main/connection.ts";
 import {
   openShell,
   resizeShell,
@@ -11,6 +17,8 @@ import {
   writeShell,
 } from "@/main/shell.ts";
 import {
+  checkWifiAddress,
+  findIpad,
   readIpadBatteryHealth,
   readIpadSoftware,
   readIpadSystem,
@@ -31,6 +39,13 @@ const textSchema = z.string();
 
 export const handlers: Handlers = {
   getAppVersion: () => app.getVersion(),
+  readConnection,
+  chooseTransport: (transport) => {
+    chooseTransport(transportSchema.parse(transport));
+  },
+  readWifiAddress,
+  setWifiAddress: (address) =>
+    checkWifiAddress(wifiAddressSchema.parse(address)),
   findIpad,
   readIpadSystem,
   readIpadBatteryHealth,

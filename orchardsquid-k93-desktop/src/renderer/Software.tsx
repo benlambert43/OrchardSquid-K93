@@ -1,10 +1,14 @@
 import { Button, Page } from "@orchardsquid-k93/ui";
 import { useState, useTransition } from "react";
 
-import type { IpadSoftware } from "@/bridge.ts";
+import type { Connection, IpadSoftware, Transport } from "@/bridge.ts";
 import { type Check, ReportPanel } from "@/renderer/ReportPanel.tsx";
 import { PackageTable } from "@/renderer/software/PackageTable.tsx";
 import { SoftwareDetails } from "@/renderer/software/SoftwareDetails.tsx";
+import {
+  loadConnection,
+  TransportPicker,
+} from "@/renderer/TransportPicker.tsx";
 
 async function loadSoftware(): Promise<Check<IpadSoftware>> {
   try {
@@ -18,24 +22,45 @@ async function loadSoftware(): Promise<Check<IpadSoftware>> {
   }
 }
 
+interface Checks {
+  connection: Promise<Connection | null>;
+  software: Promise<Check<IpadSoftware>>;
+}
+
+function loadChecks(transport?: Transport): Checks {
+  const connection = loadConnection(transport);
+  return { connection, software: connection.then(() => loadSoftware()) };
+}
+
 export function Software() {
-  const [check, setCheck] = useState(loadSoftware);
+  const [checks, setChecks] = useState(() => loadChecks());
   const [isRefreshing, startRefresh] = useTransition();
+  const refresh = (transport?: Transport) => {
+    startRefresh(() => {
+      setChecks(loadChecks(transport));
+    });
+  };
+  const check = checks.software;
 
   return (
     <Page
       title="Software"
       actions={
-        <Button
-          disabled={isRefreshing}
-          onClick={() => {
-            startRefresh(() => {
-              setCheck(loadSoftware());
-            });
-          }}
-        >
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <TransportPicker
+            connection={checks.connection}
+            disabled={isRefreshing}
+            onChoose={refresh}
+          />
+          <Button
+            disabled={isRefreshing}
+            onClick={() => {
+              refresh();
+            }}
+          >
+            Refresh
+          </Button>
+        </div>
       }
     >
       <div className="grid max-w-3xl gap-6">

@@ -4,7 +4,12 @@ import path from "node:path";
 
 import { Client, type ParsedKey, utils } from "ssh2";
 
-import { openIpadPort } from "@/main/ipad.ts";
+import type { Connection } from "@/bridge.ts";
+import {
+  IpadUnreachableError,
+  openIpadPort,
+  readConnection,
+} from "@/main/connection.ts";
 
 export const sshPort = 22;
 export const username = "root";
@@ -15,12 +20,6 @@ const keepaliveIntervalMs = 15_000;
 const commandTimeoutMs = 10_000;
 const recordSeparator = "\x1e";
 const recordSeparatorEscape = String.raw`\036`;
-
-export class IpadUnpluggedError extends Error {
-  constructor() {
-    super("The iPad is not connected over USB");
-  }
-}
 
 export class SignInRefusedError extends Error {
   constructor() {
@@ -39,10 +38,13 @@ async function readKey(): Promise<ParsedKey | null> {
   return key instanceof Error ? null : key;
 }
 
-export async function connectSsh(askPassword?: AskPassword): Promise<Client> {
-  const socket = await openIpadPort(sshPort);
+export async function connectSsh(
+  askPassword?: AskPassword,
+  connection: Connection = readConnection(),
+): Promise<Client> {
+  const socket = await openIpadPort(sshPort, connection);
   if (!socket) {
-    throw new IpadUnpluggedError();
+    throw new IpadUnreachableError(connection);
   }
   const key = await readKey();
   const client = new Client();

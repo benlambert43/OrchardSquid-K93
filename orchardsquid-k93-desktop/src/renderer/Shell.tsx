@@ -4,6 +4,7 @@ import { Terminal } from "@xterm/xterm";
 import { useEffect, useId, useRef, useState } from "react";
 
 import type { ShellStatus } from "@/bridge.ts";
+import { transportNames } from "@/unreachable.ts";
 
 const background = "#09090b";
 const fontFamily = '"Geist Mono Variable", ui-monospace, monospace';
@@ -23,7 +24,7 @@ function describe(status: ShellStatus): string {
     case "password":
       return "Waiting for the password";
     case "open":
-      return "Connected as root over USB";
+      return `Connected as root over ${transportNames[status.transport]}`;
     case "closed":
       return status.reason;
   }

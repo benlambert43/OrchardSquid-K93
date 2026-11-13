@@ -2,11 +2,8 @@ import type { Client, ClientChannel } from "ssh2";
 
 import type { ShellStatus, TerminalSize } from "@/bridge.ts";
 import { send } from "@/main/events.ts";
-import {
-  connectSsh,
-  IpadUnpluggedError,
-  SignInRefusedError,
-} from "@/main/ssh.ts";
+import { readConnection } from "@/main/connection.ts";
+import { connectSsh, SignInRefusedError } from "@/main/ssh.ts";
 
 const terminalType = "xterm-256color";
 const backlogLimitBytes = 1024 * 1024;
@@ -55,9 +52,6 @@ function requestShell(client: Client): Promise<ClientChannel> {
 }
 
 function describe(error: unknown): string {
-  if (error instanceof IpadUnpluggedError) {
-    return "The iPad is not connected over USB.";
-  }
   if (error instanceof SignInRefusedError) {
     return "The iPad did not accept the sign-in.";
   }
@@ -70,7 +64,8 @@ async function start(): Promise<void> {
   send("shellReplay", new Uint8Array());
   setStatus({ state: "connecting" });
   try {
-    const client = await connectSsh(askPassword);
+    const connection = readConnection();
+    const client = await connectSsh(askPassword, connection);
     const stream = await requestShell(client);
     let exited = false;
     const finish = (reason: string) => {
@@ -97,7 +92,7 @@ async function start(): Promise<void> {
     client.on("close", () => {
       finish("The connection to the iPad was lost.");
     });
-    setStatus({ state: "open" });
+    setStatus({ state: "open", transport: connection.transport });
   } catch (error) {
     setStatus({ state: "closed", reason: describe(error) });
   } finally {

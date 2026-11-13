@@ -10,22 +10,37 @@ import {
 } from "@orchardsquid-k93/ui";
 import { Suspense, use, useState, useTransition } from "react";
 
-import type { Ipad, IpadBatteryHealth, IpadSystem } from "@/bridge.ts";
+import type {
+  Connection,
+  IpadBatteryHealth,
+  IpadReport,
+  IpadSystem,
+  Transport,
+} from "@/bridge.ts";
 import { BatteryDetails } from "@/renderer/dashboard/BatteryDetails.tsx";
 import { CrashReportDetails } from "@/renderer/dashboard/CrashReportDetails.tsx";
 import { NetworkDetails } from "@/renderer/dashboard/NetworkDetails.tsx";
 import { ProcessDetails } from "@/renderer/dashboard/ProcessDetails.tsx";
 import { SystemDetails } from "@/renderer/dashboard/SystemDetails.tsx";
-import { type Check, ReportPanel } from "@/renderer/ReportPanel.tsx";
+import {
+  type Check,
+  ReportPanel,
+  signedOutExplanation,
+} from "@/renderer/ReportPanel.tsx";
+import {
+  loadConnection,
+  TransportPicker,
+} from "@/renderer/TransportPicker.tsx";
+import { UnreachableNote } from "@/renderer/UnreachableNote.tsx";
+import { transportNames } from "@/unreachable.ts";
 
 type IpadCheck =
-  | { state: "connected"; ipad: Ipad }
-  | { state: "unplugged" }
-  | { state: "failed" };
+  IpadReport | { state: "failed"; connection: Connection | null };
 
 type SystemCheck = Check<IpadSystem>;
 
 interface Checks {
+  connection: Promise<Connection | null>;
   version: Promise<string | null>;
   ipad: Promise<IpadCheck>;
   system: Promise<SystemCheck>;
@@ -41,13 +56,12 @@ async function loadAppVersion(): Promise<string | null> {
   }
 }
 
-async function loadIpad(): Promise<IpadCheck> {
+async function loadIpad(connection: Connection | null): Promise<IpadCheck> {
   try {
-    const ipad = await window.bridge.findIpad();
-    return ipad ? { state: "connected", ipad } : { state: "unplugged" };
+    return await window.bridge.findIpad();
   } catch (error) {
     console.error("iPad check failed", error);
-    return { state: "failed" };
+    return { state: "failed", connection };
   }
 }
 
@@ -72,24 +86,32 @@ async function loadBatteryHealth(): Promise<IpadBatteryHealth | null> {
   }
 }
 
-function loadChecks(): Checks {
+function loadChecks(transport?: Transport): Checks {
+  const connection = loadConnection(transport);
   return {
+    connection,
     version: loadAppVersion(),
-    ipad: loadIpad(),
-    system: loadSystem(),
-    batteryHealth: loadBatteryHealth(),
+    ipad: connection.then(loadIpad),
+    system: connection.then(() => loadSystem()),
+    batteryHealth: connection.then(() => loadBatteryHealth()),
   };
+}
+
+function overTransport(connection: Connection | null): string {
+  return connection ? ` over ${transportNames[connection.transport]}` : "";
 }
 
 function IpadDetails({ check }: { check: Promise<IpadCheck> }) {
   const loaded = use(check);
-  if (loaded.state !== "connected") {
+  if (loaded.state === "unreachable") {
+    return <UnreachableNote connection={loaded.connection} />;
+  }
+  if (loaded.state === "signed-out") {
+    return <PanelNote>{signedOutExplanation}</PanelNote>;
+  }
+  if (loaded.state !== "ok") {
     return (
-      <PanelNote>
-        {loaded.state === "unplugged"
-          ? "Connect the iPad 2 with its USB cable."
-          : "The iPad did not answer over USB."}
-      </PanelNote>
+      <PanelNote>{`The iPad did not answer${overTransport(loaded.connection)}.`}</PanelNote>
     );
   }
   const { ipad } = loaded;
@@ -102,11 +124,15 @@ function IpadDetails({ check }: { check: Promise<IpadCheck> }) {
       <Detail label="iOS">
         {ipad.productVersion} ({ipad.buildVersion})
       </Detail>
-      <Detail label="Wi-Fi address">
-        <span className="font-mono">{ipad.wifiAddress}</span>
+      <Detail label="Wi-Fi MAC">
+        <span className="font-mono">{ipad.wifiAddress ?? "Unknown"}</span>
       </Detail>
       <Detail label="Identifier">
-        <span className="font-mono text-xs">{ipad.udid}</span>
+        {ipad.udid ? (
+          <span className="font-mono text-xs">{ipad.udid}</span>
+        ) : (
+          "Not readable over Wi-Fi. Switch to USB to read it."
+        )}
       </Detail>
     </DetailList>
   );
@@ -122,14 +148,24 @@ function MainProcessStatus({ version }: { version: Promise<string | null> }) {
 }
 
 function IpadStatus({ check }: { check: Promise<IpadCheck> }) {
-  const { state } = use(check);
-  return state === "connected" ? (
-    <StatusRow label="iPad" state="ok" detail="Connected over USB" />
-  ) : (
+  const loaded = use(check);
+  if (loaded.state === "ok") {
+    return (
+      <StatusRow
+        label="iPad"
+        state="ok"
+        detail={`Connected${overTransport(loaded.connection)}`}
+      />
+    );
+  }
+  return (
     <StatusRow
       label="iPad"
       state="error"
-      {...(state === "unplugged" && { detail: "Not connected over USB" })}
+      {...(loaded.state === "unreachable" && {
+        detail: `Not reachable${overTransport(loaded.connection)}`,
+      })}
+      {...(loaded.state === "signed-out" && { detail: "Key not accepted" })}
     />
   );
 }
@@ -148,23 +184,33 @@ function SshStatus({ check }: { check: Promise<SystemCheck> }) {
 }
 
 export function Dashboard() {
-  const [checks, setChecks] = useState(loadChecks);
+  const [checks, setChecks] = useState(() => loadChecks());
   const [isRefreshing, startRefresh] = useTransition();
+  const refresh = (transport?: Transport) => {
+    startRefresh(() => {
+      setChecks(loadChecks(transport));
+    });
+  };
 
   return (
     <Page
       title="Dashboard"
       actions={
-        <Button
-          disabled={isRefreshing}
-          onClick={() => {
-            startRefresh(() => {
-              setChecks(loadChecks());
-            });
-          }}
-        >
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <TransportPicker
+            connection={checks.connection}
+            disabled={isRefreshing}
+            onChoose={refresh}
+          />
+          <Button
+            disabled={isRefreshing}
+            onClick={() => {
+              refresh();
+            }}
+          >
+            Refresh
+          </Button>
+        </div>
       }
     >
       <div className="grid items-start gap-6 @2xl:grid-cols-2">

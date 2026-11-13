@@ -1,17 +1,10 @@
-import type { Socket } from "node:net";
-
 import { build, parse } from "plist";
 import { z } from "zod";
 
 import type { Ipad } from "@/bridge.ts";
-import {
-  clientName,
-  findUsbDevice,
-  openPort,
-  readExactly,
-} from "@/main/usbmux.ts";
+import { openIpadPort } from "@/main/connection.ts";
+import { clientName, readExactly } from "@/main/usbmux.ts";
 
-export const k93UsbProductId = 0x129f;
 const lockdownPort = 62078;
 const lengthSize = 4;
 
@@ -27,13 +20,8 @@ const identitySchema = z.object({
   }),
 });
 
-export async function openIpadPort(port: number): Promise<Socket | null> {
-  const deviceId = await findUsbDevice(k93UsbProductId);
-  return deviceId === undefined ? null : openPort(deviceId, port);
-}
-
-export async function findIpad(): Promise<Ipad | null> {
-  const socket = await openIpadPort(lockdownPort);
+export async function findIpadOverUsb(): Promise<Ipad | null> {
+  const socket = await openIpadPort(lockdownPort, { transport: "usb" });
   if (!socket) {
     return null;
   }

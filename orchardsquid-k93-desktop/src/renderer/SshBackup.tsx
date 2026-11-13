@@ -29,7 +29,7 @@ function describe(outcome: Outcome): string | null {
     case "saved":
       return outcome.ipadIncluded
         ? `Saved to ${outcome.path}`
-        : `Saved to ${outcome.path}, without the iPad's host key and SSH settings, because the iPad did not answer over USB.`;
+        : `Saved to ${outcome.path}, without the iPad's host key and SSH settings, because the iPad did not answer.`;
     case "restored":
       return [
         "Restored. This computer's key for the iPad is in place.",

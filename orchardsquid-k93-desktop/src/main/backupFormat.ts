@@ -59,8 +59,8 @@ export const backupSchema = z.object({
         hardwareModel: z.string(),
         productVersion: z.string(),
         buildVersion: z.string(),
-        wifiAddress: z.string(),
-        udid: z.string(),
+        wifiAddress: z.string().nullable(),
+        udid: z.string().nullable(),
       })
       .nullable(),
     hostKey: publicKeySchema.nullable(),
